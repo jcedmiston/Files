@@ -1,5 +1,3 @@
-using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.WinUI;
 using Files.App.Extensions;
 using Files.App.Filesystem;
 using Files.App.Filesystem.StorageItems;
