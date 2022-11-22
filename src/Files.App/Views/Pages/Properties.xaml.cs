@@ -1,49 +1,35 @@
-﻿using Files.Uwp.DataModels.NavigationControlItems;
-using Files.Uwp.Filesystem;
-using Files.Uwp.Helpers;
-using Files.Uwp.Helpers.XamlHelpers;
-using Files.Uwp.ViewModels;
-using Files.Uwp.ViewModels.Properties;
-using Microsoft.Toolkit.Uwp;
+﻿using CommunityToolkit.WinUI;
+using Files.App.DataModels.NavigationControlItems;
+using Files.App.Filesystem;
+using Files.App.Helpers;
+using Files.App.Helpers.XamlHelpers;
+using Files.App.ViewModels;
+using Files.App.ViewModels.Properties;
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Markup;
+using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Threading;
-using Windows.ApplicationModel.Core;
-using Windows.ApplicationModel.Resources.Core;
 using Windows.Foundation.Metadata;
+using Windows.Graphics;
 using Windows.System;
 using Windows.UI;
-using Windows.UI.Core;
-using Windows.UI.ViewManagement;
-using Windows.UI.WindowManagement;
-using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Markup;
-using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Media.Animation;
-using Windows.UI.Xaml.Navigation;
 
-namespace Files.Uwp.Views
+namespace Files.App.Views
 {
     public sealed partial class Properties : Page
     {
-        private static ApplicationViewTitleBar TitleBar;
-
-        private CancellationTokenSource tokenSource = new CancellationTokenSource();
+        private CancellationTokenSource? tokenSource = new CancellationTokenSource();
         private ContentDialog propertiesDialog;
 
         private object navParameterItem;
         private IShellPage AppInstance;
 
         private ListedItem listedItem;
-
-        private Storyboard RectHoverAnim;
-        private Storyboard RectUnHoverAnim;
-
-        private Storyboard CrossHoverAnim;
-        private Storyboard CrossUnHoverAnim;
-
-        private XamlCompositionBrushBase micaBrush;
 
         public SettingsViewModel AppSettings => App.AppSettings;
 
@@ -53,12 +39,17 @@ namespace Files.Uwp.Views
         {
             InitializeComponent();
 
-            var flowDirectionSetting = ResourceContext.GetForCurrentView().QualifierValues["LayoutDirection"];
+            var flowDirectionSetting = /*
+				TODO ResourceContext.GetForCurrentView and ResourceContext.GetForViewIndependentUse do not exist in Windows App SDK
+				Use your ResourceManager instance to create a ResourceContext as below. If you already have a ResourceManager instance,
+				replace the new instance created below with correct instance.
+				Read: https://docs.microsoft.com/en-us/windows/apps/windows-app-sdk/migrate-to-windows-app-sdk/guides/mrtcore
+			*/new Microsoft.Windows.ApplicationModel.Resources.ResourceManager().CreateResourceContext().QualifierValues["LayoutDirection"];
 
             if (flowDirectionSetting == "RTL")
-            {
                 FlowDirection = FlowDirection.RightToLeft;
-            }
+
+            contentFrame.Navigated += ContentFrame_Navigated;
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -67,14 +58,14 @@ namespace Files.Uwp.Views
             AppInstance = args.AppInstanceArgument;
             navParameterItem = args.Item;
             listedItem = args.Item as ListedItem;
-            TabShorcut.Visibility = listedItem != null && listedItem.IsShortcutItem ? Visibility.Visible : Visibility.Collapsed;
-            TabLibrary.Visibility = listedItem != null && listedItem.IsLibraryItem ? Visibility.Visible : Visibility.Collapsed;
-            TabDetails.Visibility = Visibility.Visible; //listedItem != null && listedItem.FileExtension != null && !listedItem.IsShortcutItem && !listedItem.IsLibraryItem ? Visibility.Visible : Visibility.Collapsed;
+            TabShorcut.Visibility = listedItem != null && listedItem.IsShortcut ? Visibility.Visible : Visibility.Collapsed;
+            TabLibrary.Visibility = listedItem != null && listedItem.IsLibrary ? Visibility.Visible : Visibility.Collapsed;
+            TabDetails.Visibility = Visibility.Visible; //listedItem != null && listedItem.FileExtension != null && !listedItem.IsShortcut && !listedItem.IsLibrary ? Visibility.Visible : Visibility.Collapsed;
             TabSecurity.Visibility = args.Item is DriveItem ||
-                (listedItem != null && !listedItem.IsLibraryItem && !listedItem.IsRecycleBinItem) ? Visibility.Visible : Visibility.Collapsed;
-            TabCustomization.Visibility = listedItem != null && !listedItem.IsLibraryItem && (
-                (listedItem.PrimaryItemAttribute == Windows.Storage.StorageItemTypes.Folder && !listedItem.IsZipItem) ||
-                (listedItem.IsShortcutItem && !listedItem.IsLinkItem)) ? Visibility.Visible : Visibility.Collapsed;
+                (listedItem != null && !listedItem.IsLibrary && !listedItem.IsRecycleBinItem) ? Visibility.Visible : Visibility.Collapsed;
+            TabCustomization.Visibility = listedItem != null && !listedItem.IsLibrary && (
+                (listedItem.PrimaryItemAttribute == Windows.Storage.StorageItemTypes.Folder && !listedItem.IsArchive) ||
+                (listedItem.IsShortcut && !listedItem.IsLinkItem)) ? Visibility.Visible : Visibility.Collapsed;
             TabCompatibility.Visibility = listedItem != null && (
                     ".exe".Equals(listedItem is ShortcutItem sht ? System.IO.Path.GetExtension(sht.TargetPath) : listedItem.FileExtension, StringComparison.OrdinalIgnoreCase)
                 ) ? Visibility.Visible : Visibility.Collapsed;
@@ -86,90 +77,75 @@ namespace Files.Uwp.Views
             AppSettings.ThemeModeChanged += AppSettings_ThemeModeChanged;
             if (ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8))
             {
-                // Set window size in the loaded event to prevent flickering
-                if (WindowDecorationsHelper.IsWindowDecorationsAllowed)
-                {
-                    appWindow.TitleBar.SetPreferredVisibility(AppWindowTitleBarVisibility.AlwaysHidden);
-                    appWindow.Frame.DragRegionVisuals.Add(TitleBarDragArea);
-
-                    crossIcon.Foreground = ThemeHelper.RootTheme switch
-                    {
-                        ElementTheme.Default => new SolidColorBrush((Color)Application.Current.Resources["SystemBaseHighColor"]),
-                        ElementTheme.Light => new SolidColorBrush(Colors.Black),
-                        ElementTheme.Dark => new SolidColorBrush(Colors.White),
-                        _ => new SolidColorBrush((Color)Application.Current.Resources["SystemBaseHighColor"])
-                    };
-
-                    var micaIsSupported = ApiInformation.IsMethodPresent("Windows.UI.Composition.Compositor", "TryCreateBlurredWallpaperBackdropBrush");
-                    if (micaIsSupported)
-                    {
-                        micaBrush = new Brushes.MicaBrush(false);
-                        (micaBrush as Brushes.MicaBrush).SetAppWindow(appWindow);
-                        Frame.Background = micaBrush;
-                    }
-                    else
-                    {
-                        Microsoft.UI.Xaml.Controls.BackdropMaterial.SetApplyToRootOrPageBackground(sender as Control, true);
-                    }
-
-                    var duration = new Duration(TimeSpan.FromMilliseconds(280));
-
-                    RectHoverAnim = new Storyboard();
-                    var RectHoverColorAnim = new ColorAnimation();
-                    RectHoverColorAnim.Duration = duration;
-                    RectHoverColorAnim.From = Colors.Transparent;
-                    RectHoverColorAnim.To = Color.FromArgb(255, 232, 17, 35);
-                    RectHoverColorAnim.EasingFunction = new SineEase();
-                    Storyboard.SetTarget(RectHoverColorAnim, CloseRect);
-                    Storyboard.SetTargetProperty(RectHoverColorAnim, "(Rectangle.Fill).(SolidColorBrush.Color)");
-                    RectHoverAnim.Children.Add(RectHoverColorAnim);
-
-                    RectUnHoverAnim = new Storyboard();
-                    var RectUnHoverColorAnim = new ColorAnimation();
-                    RectUnHoverColorAnim.Duration = duration;
-                    RectUnHoverColorAnim.To = Colors.Transparent;
-                    RectUnHoverColorAnim.From = Color.FromArgb(255, 232, 17, 35);
-                    RectUnHoverColorAnim.EasingFunction = new SineEase();
-                    Storyboard.SetTarget(RectUnHoverColorAnim, CloseRect);
-                    Storyboard.SetTargetProperty(RectUnHoverColorAnim, "(Rectangle.Fill).(SolidColorBrush.Color)");
-                    RectUnHoverAnim.Children.Add(RectUnHoverColorAnim);
-
-                    CrossHoverAnim = new Storyboard();
-                    var CrossHoverColorAnim = new ColorAnimation();
-                    CrossHoverColorAnim.Duration = duration;
-                    CrossHoverColorAnim.From = ((SolidColorBrush)crossIcon.Foreground).Color;
-                    CrossHoverColorAnim.To = Colors.White;
-                    CrossHoverColorAnim.EasingFunction = new SineEase();
-                    Storyboard.SetTarget(CrossHoverColorAnim, crossIcon);
-                    Storyboard.SetTargetProperty(CrossHoverColorAnim, "(PathIcon.Foreground).(SolidColorBrush.Color)");
-                    CrossHoverAnim.Children.Add(CrossHoverColorAnim);
-
-                    CrossUnHoverAnim = new Storyboard();
-                    var CrossUnHoverColorAnim = new ColorAnimation();
-                    CrossUnHoverColorAnim.Duration = duration;
-                    CrossUnHoverColorAnim.To = ((SolidColorBrush)crossIcon.Foreground).Color;
-                    CrossUnHoverColorAnim.From = Colors.White;
-                    CrossUnHoverColorAnim.EasingFunction = new SineEase();
-                    Storyboard.SetTarget(CrossUnHoverColorAnim, crossIcon);
-                    Storyboard.SetTargetProperty(CrossUnHoverColorAnim, "(PathIcon.Foreground).(SolidColorBrush.Color)");
-                    CrossUnHoverAnim.Children.Add(CrossUnHoverColorAnim);
-                }
-                else
-                {
-                    Microsoft.UI.Xaml.Controls.BackdropMaterial.SetApplyToRootOrPageBackground(sender as Control, true);
-
-                    TitleBar = ApplicationView.GetForCurrentView().TitleBar;
-                    TitleBar.ButtonBackgroundColor = Colors.Transparent;
-                    TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
-                    Window.Current.SetTitleBar(TitleBarDragArea);
-                }
-                await CoreApplication.MainView.DispatcherQueue.EnqueueAsync(() => AppSettings.UpdateThemeElements.Execute(null));
+                NavigationView.SizeChanged += NavigationView_SizeChanged;
+                appWindow.Destroying += AppWindow_Destroying;
+                await App.Window.DispatcherQueue.EnqueueAsync(() => AppSettings.UpdateThemeElements.Execute(null));
             }
             else
             {
-                Microsoft.UI.Xaml.Controls.BackdropMaterial.SetApplyToRootOrPageBackground(sender as Control, true);
                 propertiesDialog = DependencyObjectHelpers.FindParent<ContentDialog>(this);
                 propertiesDialog.Closed += PropertiesDialog_Closed;
+            }
+        }
+
+        private void NavigationView_SizeChanged(object? sender, SizeChangedEventArgs? e)
+        {
+            /*
+			 We have to calculate the width of NavigationView as 'ActualWidth' is bigger than the real size occupied by the control.
+			 This code calculates the sum of all the visible tabs' widths.
+			 If a tab is visible and its width is 0, it is shown in the overflow menu. In this case we add the overflow's size to the total.
+			 */
+            int navigationViewWidth = 0;
+            bool overflowAdded = false;
+            foreach (NavigationViewItem item in NavigationView.MenuItems)
+            {
+                if (item.Visibility == Visibility.Visible)
+                {
+                    if (item.ActualWidth != 0)
+                    {
+                        navigationViewWidth += (int)item.ActualWidth;
+                    }
+                    else if (!overflowAdded)
+                    {
+                        navigationViewWidth += (int)item.CompactPaneLength;
+                        overflowAdded = true;
+                    }
+                }
+            }
+
+            // Sets properties window drag region.
+            appWindow.TitleBar.SetDragRectangles(new RectInt32[]
+            {
+				// This area is over the top margin of NavigationView.
+				new RectInt32(0, 0, navigationViewWidth, (int)NavigationView.ActualOffset.Y),
+				// This area is on the right of NavigationView and stretches for all the remaining space.
+				new RectInt32(navigationViewWidth, 0, (int)(TitleBarDragArea.ActualSize.X - navigationViewWidth), (int)TitleBarDragArea.ActualSize.Y)
+            });
+        }
+
+        private void ContentFrame_Navigated(object sender, NavigationEventArgs e)
+        {
+            if (contentFrame.Content is Page propertiesMenu)
+            {
+                propertiesMenu.Loaded -= PropertiesMenu_Loaded;
+                propertiesMenu.Loaded += PropertiesMenu_Loaded;
+            }
+        }
+
+        private void PropertiesMenu_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Drag region is calculated each time the active tab is changed
+            NavigationView_SizeChanged(null, null);
+        }
+
+        private void AppWindow_Destroying(AppWindow sender, object args)
+        {
+            AppSettings.ThemeModeChanged -= AppSettings_ThemeModeChanged;
+            sender.Destroying -= AppWindow_Destroying;
+            if (tokenSource is not null && !tokenSource.IsCancellationRequested)
+            {
+                tokenSource.Cancel();
+                tokenSource = null;
             }
         }
 
@@ -177,7 +153,7 @@ namespace Files.Uwp.Views
         {
             AppSettings.ThemeModeChanged -= AppSettings_ThemeModeChanged;
             sender.Closed -= PropertiesDialog_Closed;
-            if (tokenSource != null && !tokenSource.IsCancellationRequested)
+            if (tokenSource is not null && !tokenSource.IsCancellationRequested)
             {
                 tokenSource.Cancel();
                 tokenSource = null;
@@ -190,58 +166,33 @@ namespace Files.Uwp.Views
             // Why is this not called? Are we cleaning up properly?
         }
 
-        private async void AppSettings_ThemeModeChanged(object sender, EventArgs e)
+        private async void AppSettings_ThemeModeChanged(object? sender, EventArgs e)
         {
             var selectedTheme = ThemeHelper.RootTheme;
-            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+
+            await DispatcherQueue.EnqueueAsync(() =>
             {
-                RequestedTheme = selectedTheme;
-                if (ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8))
+                ((Frame)Parent).RequestedTheme = selectedTheme;
+
+                if (!ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8))
+                    return;
+
+                switch (selectedTheme)
                 {
-                    switch (RequestedTheme)
-                    {
-                        case ElementTheme.Default:
-                            if (WindowDecorationsHelper.IsWindowDecorationsAllowed)
-                            {
-                                crossIcon.Foreground = new SolidColorBrush((Color)Application.Current.Resources["SystemBaseHighColor"]);
-                                ((ColorAnimation)CrossHoverAnim.Children[0]).From = (Color)Application.Current.Resources["SystemBaseHighColor"];
-                                ((ColorAnimation)CrossUnHoverAnim.Children[0]).To = (Color)Application.Current.Resources["SystemBaseHighColor"];
-                            }
-                            else
-                            {
-                                TitleBar.ButtonHoverBackgroundColor = (Color)Application.Current.Resources["SystemBaseLowColor"];
-                                TitleBar.ButtonForegroundColor = (Color)Application.Current.Resources["SystemBaseHighColor"];
-                            }
-                            break;
+                    case ElementTheme.Default:
+                        appWindow.TitleBar.ButtonHoverBackgroundColor = (Color)Application.Current.Resources["SystemBaseLowColor"];
+                        appWindow.TitleBar.ButtonForegroundColor = (Color)Application.Current.Resources["SystemBaseHighColor"];
+                        break;
 
-                        case ElementTheme.Light:
-                            if (WindowDecorationsHelper.IsWindowDecorationsAllowed)
-                            {
-                                crossIcon.Foreground = new SolidColorBrush(Colors.Black);
-                                ((ColorAnimation)CrossHoverAnim.Children[0]).From = Colors.Black;
-                                ((ColorAnimation)CrossUnHoverAnim.Children[0]).To = Colors.Black;
-                            }
-                            else
-                            {
-                                TitleBar.ButtonHoverBackgroundColor = Color.FromArgb(51, 0, 0, 0);
-                                TitleBar.ButtonForegroundColor = Colors.Black;
-                            }
-                            break;
+                    case ElementTheme.Light:
+                        appWindow.TitleBar.ButtonHoverBackgroundColor = Color.FromArgb(51, 0, 0, 0);
+                        appWindow.TitleBar.ButtonForegroundColor = Colors.Black;
+                        break;
 
-                        case ElementTheme.Dark:
-                            if (WindowDecorationsHelper.IsWindowDecorationsAllowed)
-                            {
-                                crossIcon.Foreground = new SolidColorBrush(Colors.White);
-                                ((ColorAnimation)CrossHoverAnim.Children[0]).From = Colors.White;
-                                ((ColorAnimation)CrossUnHoverAnim.Children[0]).To = Colors.White;
-                            }
-                            else
-                            {
-                                TitleBar.ButtonHoverBackgroundColor = Color.FromArgb(51, 255, 255, 255);
-                                TitleBar.ButtonForegroundColor = Colors.White;
-                            }
-                            break;
-                    }
+                    case ElementTheme.Dark:
+                        appWindow.TitleBar.ButtonHoverBackgroundColor = Color.FromArgb(51, 255, 255, 255);
+                        appWindow.TitleBar.ButtonForegroundColor = Colors.White;
+                        break;
                 }
             });
         }
@@ -255,70 +206,34 @@ namespace Files.Uwp.Views
             else
             {
                 if (!await (contentFrame.Content as PropertiesTab).SaveChangesAsync(listedItem))
-                {
                     return;
-                }
             }
 
             if (ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8))
-            {
-                if (WindowDecorationsHelper.IsWindowDecorationsAllowed)
-                {
-                    await appWindow.CloseAsync();
-                }
-                else
-                {
-                    await ApplicationView.GetForCurrentView().TryConsolidateAsync();
-                }
-            }
+                appWindow.Destroy();
             else
-            {
                 propertiesDialog?.Hide();
-            }
         }
 
-        private async void CancelButton_Click(object sender, RoutedEventArgs e)
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             if (ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8))
-            {
-                if (WindowDecorationsHelper.IsWindowDecorationsAllowed)
-                {
-                    await appWindow.CloseAsync();
-                }
-                else
-                {
-                    await ApplicationView.GetForCurrentView().TryConsolidateAsync();
-                }
-            }
+                appWindow.Destroy();
             else
-            {
                 propertiesDialog?.Hide();
-            }
         }
 
-        private async void Page_KeyDown(object sender, KeyRoutedEventArgs e)
+        private void Page_KeyDown(object sender, KeyRoutedEventArgs e)
         {
-            if (e.Key.Equals(VirtualKey.Escape))
-            {
-                if (ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8))
-                {
-                    if (WindowDecorationsHelper.IsWindowDecorationsAllowed)
-                    {
-                        await appWindow.CloseAsync();
-                    }
-                    else
-                    {
-                        await ApplicationView.GetForCurrentView().TryConsolidateAsync();
-                    }
-                }
-                else
-                {
-                    propertiesDialog?.Hide();
-                }
-            }
+            if (!e.Key.Equals(VirtualKey.Escape))
+                return;
+            if (ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8))
+                appWindow.Destroy();
+            else
+                propertiesDialog?.Hide();
         }
 
-        private void NavigationView_SelectionChanged(Microsoft.UI.Xaml.Controls.NavigationView sender, Microsoft.UI.Xaml.Controls.NavigationViewSelectionChangedEventArgs args)
+        private void NavigationView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
             var navParam = new PropertyNavParam()
             {
@@ -384,34 +299,6 @@ namespace Files.Uwp.Views
             catch (Exception)
             {
             }
-        }
-
-        private async void CloseRect_PointerPressed(object sender, PointerRoutedEventArgs e)
-        {
-            CrossUnHoverAnim.Stop();
-            RectUnHoverAnim.Stop();
-            CrossHoverAnim.Stop();
-            RectHoverAnim.Stop();
-
-            await appWindow.CloseAsync();
-        }
-
-        private void CloseRect_PointerEntered(object sender, PointerRoutedEventArgs e)
-        {
-            CrossUnHoverAnim.Stop();
-            RectUnHoverAnim.Stop();
-
-            CrossHoverAnim.Begin();
-            RectHoverAnim.Begin();
-        }
-
-        private void CloseRect_PointerExited(object sender, PointerRoutedEventArgs e)
-        {
-            CrossHoverAnim.Stop();
-            RectHoverAnim.Stop();
-
-            CrossUnHoverAnim.Begin();
-            RectUnHoverAnim.Begin();
         }
     }
 }

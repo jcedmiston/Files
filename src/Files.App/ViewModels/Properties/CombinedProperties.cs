@@ -1,29 +1,23 @@
-using Files.Uwp.Extensions;
-using Files.Uwp.Filesystem;
-using Files.Uwp.Filesystem.StorageItems;
-using Files.Uwp.Helpers;
-using Microsoft.Toolkit.Uwp;
-using Newtonsoft.Json.Linq;
+using Files.App.Extensions;
+using Files.App.Filesystem;
+using Files.App.Helpers;
+using Microsoft.UI.Dispatching;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Windows.Devices.Geolocation;
-using Windows.Services.Maps;
 using Windows.Storage;
-using Windows.UI.Core;
 
-namespace Files.Uwp.ViewModels.Properties
+namespace Files.App.ViewModels.Properties
 {
     internal class CombinedProperties : BaseProperties
     {
         public List<ListedItem> List { get; }
 
         public CombinedProperties(SelectedItemsPropertiesViewModel viewModel, CancellationTokenSource tokenSource,
-            CoreDispatcher coreDispatcher, List<ListedItem> listedItems, IShellPage instance)
+            DispatcherQueue coreDispatcher, List<ListedItem> listedItems, IShellPage instance)
         {
             ViewModel = viewModel;
             TokenSource = tokenSource;
@@ -41,17 +35,17 @@ namespace Files.Uwp.ViewModels.Properties
                 ViewModel.LoadCombinedItemsGlyph = true;
                 if (List.All(x => x.ItemType.Equals(List.First().ItemType)))
                 {
-                    ViewModel.ItemType = string.Format("PropertiesDriveItemTypesEquals".GetLocalized(), List.First().ItemType);
+                    ViewModel.ItemType = string.Format("PropertiesDriveItemTypesEquals".GetLocalizedResource(), List.First().ItemType);
                 }
                 else
                 {
-                    ViewModel.ItemType = "PropertiesDriveItemTypeDifferent".GetLocalized();
+                    ViewModel.ItemType = "PropertiesDriveItemTypeDifferent".GetLocalizedResource();
                 }
                 var itemsPath = List.Select(Item => (Item as RecycleBinItem)?.ItemOriginalFolder ??
                     (Path.IsPathRooted(Item.ItemPath) ? Path.GetDirectoryName(Item.ItemPath) : Item.ItemPath));
                 if (itemsPath.Distinct().Count() == 1)
                 {
-                    ViewModel.ItemPath = string.Format("PropertiesCombinedItemPath".GetLocalized(), itemsPath.First());
+                    ViewModel.ItemPath = string.Format("PropertiesCombinedItemPath".GetLocalizedResource(), itemsPath.First());
                 }
             }
         }
@@ -189,7 +183,7 @@ namespace Files.Uwp.ViewModels.Properties
                 }
                 else if (!list.All(x => x.Value.Equals(list.First().Value)))
                 {
-                    list.First().Value = "PropertiesFilesHasMultipleValues".GetLocalized();
+                    list.First().Value = "PropertiesFilesHasMultipleValues".GetLocalizedResource();
                     finalProperties.Add(list.First());
                 }
                 else
