@@ -1,13 +1,20 @@
+using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.WinUI;
 using Files.App.Extensions;
 using Files.App.Filesystem;
+using Files.App.Filesystem.StorageItems;
 using Files.App.Helpers;
 using Microsoft.UI.Dispatching;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Windows.Devices.Geolocation;
+using Windows.Services.Maps;
 using Windows.Storage;
 
 namespace Files.App.ViewModels.Properties
@@ -206,23 +213,19 @@ namespace Files.App.ViewModels.Properties
         public static async Task<string> GetAddressFromCoordinatesAsync(double? Lat, double? Lon)
         {
             if (!Lat.HasValue || !Lon.HasValue)
-            {
                 return null;
-            }
 
-            JObject obj;
             try
             {
                 StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(@"ms-appx:///Resources/BingMapsKey.txt"));
                 var lines = await FileIO.ReadTextAsync(file);
-                obj = JObject.Parse(lines);
+                using var obj = JsonDocument.Parse(lines);
+                MapService.ServiceToken = obj.RootElement.GetProperty("key").GetString();
             }
             catch (Exception)
             {
                 return null;
             }
-
-            MapService.ServiceToken = (string)obj.SelectToken("key");
 
             BasicGeoposition location = new BasicGeoposition();
             location.Latitude = Lat.Value;
