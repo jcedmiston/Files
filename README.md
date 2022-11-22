@@ -1,9 +1,10 @@
 <p align="center">
-  <img alt="Files Logo" src="src/Files.Uwp/Assets/AppTiles/StoreLogo.scale-400.png" width="100px" />
+  <img alt="Files Logo" src="src/Files.App%20(Package)/Assets/AppTiles/Release/StoreLogo.scale-400.png" width="100px" />
   <h1 align="center">Files</h1>
 </p>
 
 [![Build Status](https://dev.azure.com/filescommunity/Files/_apis/build/status/Build%20Pipeline?branchName=main)](https://dev.azure.com/filescommunity/Files/_build/latest?definitionId=4&branchName=main)
+[![Crowdin](https://badges.crowdin.net/files-app/localized.svg)](https://crowdin.com/project/files-app)
 [![Discord](https://discordapp.com/api/guilds/725513575971684472/widget.png)](https://discord.gg/files)
 <a style="text-decoration:none" href="https://www.microsoft.com/store/apps/9NGHP3DX8HDX">
     <img src="https://img.shields.io/badge/Microsoft%20Store-Download-purple.svg?style=flat-round" alt="Store link" />
@@ -31,10 +32,12 @@ Have any questions? Check out our [documentation site](https://files.community/d
 ### 1: Prerequisites
 
 - [Git](https://git-scm.com)
-- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) with the UWP Development Kit and following individual components:
+- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) with the following individual components:
     - Windows 11 SDK (10.0.22000)
     - MSVC v143 - VS 2022 C++ x64/x86 build tools
     - C++ ATL for latest v143 build tools (x86 & x64)
+    - [.Net7 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
+    - [WinApp SDK Runtime 1.2](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/downloads#current-releases)
 
 ### 2: Clone the repository.
 
@@ -57,4 +60,4 @@ Want to contribute to this project? Feel free to open an [issue](https://github.
 
 ## Screenshots
 
-![Files](src/Files.Uwp/Assets/FilesHome.png)
+![Files](src/Files.App/Assets/FilesHome.png)
