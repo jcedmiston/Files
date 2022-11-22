@@ -122,6 +122,8 @@ namespace Files.Uwp.ViewModels.Properties
                 listAll.Add(listItem);
             }
 
+            
+
             List<List<FileProperty>> precombinded = new();
             foreach (List<FileProperty> list in listAll)
             {
@@ -140,6 +142,8 @@ namespace Files.Uwp.ViewModels.Properties
                 }
             }
 
+            //precombinded.Where(x => x.Property == "System.ItemTypeText").Sum(x => x.FileSizeBytes);
+
             List<FileProperty> finalProperties = new();
             foreach(List<FileProperty> list in precombinded)
             {
@@ -154,6 +158,10 @@ namespace Files.Uwp.ViewModels.Properties
                     {
                         finalProperties.Add(list.First());
                     }
+                }
+                else if (list.First().Property == "System.DateModified")
+                {
+                    finalProperties.Add(list.First());
                 }
                 else if (list.First().Property == "System.Media.Duration")
                 {
