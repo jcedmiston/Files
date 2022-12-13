@@ -160,7 +160,8 @@
 		"SectionResource": "PropertySectionAudio",
 		"Property": "System.Audio.EncodingBitrate",
 		"IsReadOnly": true,
-		"ID": null
+		"ID": null,
+		"DisplayFunctionName": "Addkbps"
 	},
 	{
 		"NameResource": "Compression",
@@ -181,7 +182,8 @@
 		"SectionResource": "PropertySectionAudio",
 		"Property": "System.Audio.SampleRate",
 		"IsReadOnly": true,
-		"ID": null
+		"ID": null,
+		"DisplayFunctionName": "AddkHz"
 	},
 	{
 		"NameResource": "Artist",
@@ -498,7 +500,16 @@
 		"SectionResource": "PropertySectionVideo",
 		"Property": "System.Video.EncodingBitrate",
 		"IsReadOnly": true,
-		"ID": null
+		"ID": null,
+		"DisplayFunctionName": "Addkbps"
+	},
+	{
+		"NameResource": "PropertyTotalBitrate",
+		"SectionResource": "PropertySectionVideo",
+		"Property": "System.Video.TotalBitrate",
+		"IsReadOnly": true,
+		"ID": null,
+		"DisplayFunctionName": "Addkbps"
 	},
 	{
 		"NameResource": "Compression",

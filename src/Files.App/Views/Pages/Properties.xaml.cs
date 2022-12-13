@@ -60,7 +60,7 @@ namespace Files.App.Views
 			listedItem = args.Item as ListedItem;
 			TabShorcut.Visibility = listedItem is not null && listedItem.IsShortcut ? Visibility.Visible : Visibility.Collapsed;
 			TabLibrary.Visibility = listedItem is not null && listedItem.IsLibrary ? Visibility.Visible : Visibility.Collapsed;
-			TabDetails.Visibility = listedItem is not null && listedItem.FileExtension is not null && !listedItem.IsShortcut && !listedItem.IsLibrary ? Visibility.Visible : Visibility.Collapsed;
+			TabDetails.Visibility = Visibility.Visible; //listedItem is not null && listedItem.FileExtension is not null && !listedItem.IsShortcut && !listedItem.IsLibrary ? Visibility.Visible : Visibility.Collapsed;
 			TabSecurity.Visibility = args.Item is DriveItem ||
 				(listedItem is not null && !listedItem.IsLibrary && !listedItem.IsRecycleBinItem) ? Visibility.Visible : Visibility.Collapsed;
 			TabCustomization.Visibility = listedItem is not null && !listedItem.IsLibrary && (

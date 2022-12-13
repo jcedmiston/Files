@@ -28,7 +28,14 @@ namespace Files.App.Views
 				stopwatch.Stop();
 				Debug.WriteLine(string.Format("System file properties were obtained in {0} milliseconds", stopwatch.ElapsedMilliseconds));
 			}
-		}
+            if (BaseProperties is CombinedProperties combinedProps)
+            {
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                combinedProps.GetSystemFileProperties();
+                stopwatch.Stop();
+                Debug.WriteLine(string.Format("System file properties were obtained in {0} milliseconds", stopwatch.ElapsedMilliseconds));
+            }
+        }
 
 		// WINUI3
 		private static ContentDialog SetContentDialogRoot(ContentDialog contentDialog)
