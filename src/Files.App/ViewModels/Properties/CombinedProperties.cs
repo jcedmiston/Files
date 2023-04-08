@@ -1,17 +1,19 @@
-using CommunityToolkit.WinUI;
 using Files.App.Extensions;
 using Files.App.Filesystem;
 using Files.App.Filesystem.StorageItems;
 using Files.App.Helpers;
+using Microsoft.Extensions.Logging;
 using Microsoft.UI.Dispatching;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Windows.Devices.Geolocation;
+using Windows.Services.Maps;
 using Windows.Storage;
 
 namespace Files.App.ViewModels.Properties
@@ -20,8 +22,12 @@ namespace Files.App.ViewModels.Properties
     {
         public List<ListedItem> List { get; }
 
-        public CombinedProperties(SelectedItemsPropertiesViewModel viewModel, CancellationTokenSource tokenSource,
-            DispatcherQueue coreDispatcher, List<ListedItem> listedItems, IShellPage instance)
+		public CombinedProperties(
+			SelectedItemsPropertiesViewModel viewModel,
+			CancellationTokenSource tokenSource,
+			DispatcherQueue coreDispatcher,
+			List<ListedItem> listedItems,
+			IShellPage instance)
         {
             ViewModel = viewModel;
             TokenSource = tokenSource;
@@ -34,9 +40,10 @@ namespace Files.App.ViewModels.Properties
 
         public override void GetBaseProperties()
         {
-            if (List is not null)
+			if (List is not null)
             {
                 ViewModel.LoadCombinedItemsGlyph = true;
+
                 if (List.All(x => x.ItemType.Equals(List.First().ItemType)))
                 {
                     ViewModel.ItemType = string.Format("PropertiesDriveItemTypesEquals".GetLocalizedResource(), List.First().ItemType);
@@ -45,8 +52,10 @@ namespace Files.App.ViewModels.Properties
                 {
                     ViewModel.ItemType = "PropertiesDriveItemTypeDifferent".GetLocalizedResource();
                 }
+
                 var itemsPath = List.Select(Item => (Item as RecycleBinItem)?.ItemOriginalFolder ??
                     (Path.IsPathRooted(Item.ItemPath) ? Path.GetDirectoryName(Item.ItemPath) : Item.ItemPath));
+                    
                 if (itemsPath.Distinct().Count() == 1)
                 {
                     ViewModel.ItemPath = string.Format("PropertiesCombinedItemPath".GetLocalizedResource(), itemsPath.First());
@@ -88,7 +97,7 @@ namespace Files.App.ViewModels.Properties
                     }
                     catch (Exception ex)
                     {
-                        App.Logger.Warn(ex, ex.Message);
+                        App.Logger.LogWarning(ex, ex.Message);
                     }
                 }
             }
@@ -113,8 +122,6 @@ namespace Files.App.ViewModels.Properties
                 files.Add(file);
             }
 
-
-
             List<List<FileProperty>> listAll = new();
             foreach (BaseStorageFile file in files)
             {
@@ -122,7 +129,7 @@ namespace Files.App.ViewModels.Properties
                 listAll.Add(listItem);
             }
 
-
+            
 
             List<List<FileProperty>> precombinded = new();
             foreach (List<FileProperty> list in listAll)
@@ -131,13 +138,11 @@ namespace Files.App.ViewModels.Properties
                 {
                     if (precombinded.ElementAtOrDefault(i) == null)
                     {
-                        List<FileProperty> tempList = new()
-                        {
-                            list[i]
-                        };
+                        List<FileProperty> tempList = new();
+                        tempList.Add(list[i]);
                         precombinded.Add(tempList);
                     }
-                    else
+                    else 
                     {
                         precombinded[i].Add(list[i]);
                     }
@@ -147,67 +152,56 @@ namespace Files.App.ViewModels.Properties
             //precombinded.Where(x => x.Property == "System.ItemTypeText").Sum(x => x.FileSizeBytes);
 
             List<FileProperty> finalProperties = new();
-            foreach (List<FileProperty> list in precombinded)
+            foreach(List<FileProperty> list in precombinded)
             {
-                if (list.All(x => x.Value == null))
+                if (list.First().Property == "System.ItemTypeText")
+                {
+                    if (!list.All(x => x.Value.Equals(list.First().Value)))
+                    {
+                        list.First().Value = string.Join("; ", list.Select(x => x.Value).Distinct().ToList());
+                        finalProperties.Add(list.First());
+                    }
+                    else
+                    {
+                        finalProperties.Add(list.First());
+                    }
+                }
+                else if (list.First().Property == "System.DateModified")
                 {
                     finalProperties.Add(list.First());
-                    continue;
                 }
-                switch (list.First().Property)
+                else if (list.First().Property == "System.Media.Duration")
                 {
-                    case "System.ItemTypeText":
-                        if (!list.All(x => x.Value.Equals(list.First().Value)))
-                        {
-                            list.First().Value = string.Join("; ", list.Select(x => x.Value).Distinct().ToList());
-                            finalProperties.Add(list.First());
-                        }
-                        else
-                        {
-                            finalProperties.Add(list.First());
-                        }
-                        break;
-
-                    case "System.DateModified":
+                    if (!list.All(x => x.Value == null))
+                    {
+                        list.First().Value = list.Select(x => x.Value).ToList().Sum(str => Convert.ToInt64(str));
                         finalProperties.Add(list.First());
-                        break;
-
-                    case "System.Media.Duration":
-                        if (!list.All(x => x.Value == null))
-                        {
-                            list.First().Value = list.Select(x => x.Value).ToList().Sum(str => Convert.ToInt64(str));
-                            finalProperties.Add(list.First());
-                        }
-                        break;
-
-                    case "System.FilePlaceholderStatus":
-                        finalProperties.Add(list.First());
-                        break;
-
-                    default:
-                        if (list.Where(x => x.Value != null).Count() >= 1)
-                        {
-                            var result = list.Where(x => x.Value != null);
-                            if ((result.Any() && result.Count() == 1) || result.All(x => x.Value.Equals(result.First().Value)))
-                            {
-                                finalProperties.Add(result.First());
-                            }
-                            else
-                            {
-                                result.First().Value = "PropertiesFilesHasMultipleValues".GetLocalizedResource();
-                                finalProperties.Add(result.First());
-                            }
-                        }
-                        else if (!list.All(x => x.Value.Equals(list.First().Value)))
-                        {
-                            list.First().Value = "PropertiesFilesHasMultipleValues".GetLocalizedResource();
-                            finalProperties.Add(list.First());
-                        }
-                        else
-                        {
-                            finalProperties.Add(list.First());
-                        }
-                        break;
+                    }
+                }
+                else if (list.First().Property == "System.FilePlaceholderStatus")
+                {
+                    finalProperties.Add(list.First());
+                }
+                else if (list.All(x => x.Value == null))
+                {
+                    finalProperties.Add(list.First());
+                }
+                else if (list.Where(x => x.Value != null).Count() == 1)
+                {
+                    var result = list.Where(x => x.Value != null);
+                    if (result.Any() && result.Count() == 1)
+                    {
+                        finalProperties.Add(result.First());
+                    }
+                }
+                else if (!list.All(x => x.Value.Equals(list.First().Value)))
+                {
+                    list.First().Value = "PropertiesFilesHasMultipleValues".GetLocalizedResource();
+                    finalProperties.Add(list.First());
+                }
+                else
+                {
+                    finalProperties.Add(list.First());
                 }
                 // System.ItemPathDisplay
             }
@@ -220,6 +214,120 @@ namespace Files.App.ViewModels.Properties
                 .OrderBy(group => group.Priority);
             ViewModel.PropertySections = new ObservableCollection<FilePropertySection>(query);
             ViewModel.FileProperties = new ObservableCollection<FileProperty>(finalProperties.Where(i => i.Value != null));
+        }
+
+        public static async Task<string> GetAddressFromCoordinatesAsync(double? Lat, double? Lon)
+        {
+            if (!Lat.HasValue || !Lon.HasValue)
+                return null;
+
+            try
+            {
+                StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(@"ms-appx:///Resources/BingMapsKey.txt"));
+                var lines = await FileIO.ReadTextAsync(file);
+                using var obj = JsonDocument.Parse(lines);
+                MapService.ServiceToken = obj.RootElement.GetProperty("key").GetString();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+
+            BasicGeoposition location = new BasicGeoposition();
+            location.Latitude = Lat.Value;
+            location.Longitude = Lon.Value;
+            Geopoint pointToReverseGeocode = new Geopoint(location);
+
+            // Reverse geocode the specified geographic location.
+
+            var result = await MapLocationFinder.FindLocationsAtAsync(pointToReverseGeocode);
+            return result?.Locations?.FirstOrDefault()?.DisplayName;
+        }
+
+        public async Task SyncPropertyChangesAsync()
+        {
+            foreach (ListedItem Item in List)
+            {
+                BaseStorageFile file = await FilesystemTasks.Wrap(() => StorageFileExtensions.DangerousGetFileFromPathAsync(Item.ItemPath));
+                if (file == null)
+                {
+                    // Could not access file, can't save properties
+                    return;
+                }
+
+                var failedProperties = "";
+                foreach (var group in ViewModel.PropertySections)
+                {
+                    foreach (FileProperty prop in group)
+                    {
+                        if (!prop.IsReadOnly && prop.Modified)
+                        {
+                            var newDict = new Dictionary<string, object>();
+                            newDict.Add(prop.Property, prop.Value);
+
+                            try
+                            {
+                                if (file.Properties != null)
+                                {
+                                    await file.Properties.SavePropertiesAsync(newDict);
+                                }
+                            }
+                            catch
+                            {
+                                failedProperties += $"{prop.Name}\n";
+                            }
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(failedProperties))
+                {
+                    throw new Exception($"The following properties failed to save: {failedProperties}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// This function goes through ever read-write property saved, then syncs it
+        /// </summary>
+        /// <returns></returns>
+        public async Task ClearPropertiesAsync()
+        {
+            foreach (ListedItem Item in List)
+            {
+                var failedProperties = new List<string>();
+                BaseStorageFile file = await FilesystemTasks.Wrap(() => StorageFileExtensions.DangerousGetFileFromPathAsync(Item.ItemPath));
+                if (file == null)
+                {
+                    return;
+                }
+
+                foreach (var group in ViewModel.PropertySections)
+                {
+                    foreach (FileProperty prop in group)
+                    {
+                        if (!prop.IsReadOnly)
+                        {
+                            var newDict = new Dictionary<string, object>();
+                            newDict.Add(prop.Property, null);
+
+                            try
+                            {
+                                if (file.Properties != null)
+                                {
+                                    await file.Properties.SavePropertiesAsync(newDict);
+                                }
+                            }
+                            catch
+                            {
+                                failedProperties.Add(prop.Name);
+                            }
+                        }
+                    }
+                }
+
+                GetSystemFileProperties();
+            }
         }
 
         private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)

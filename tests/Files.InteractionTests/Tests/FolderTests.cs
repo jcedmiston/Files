@@ -1,8 +1,6 @@
 ﻿using OpenQA.Selenium;
 using OpenQA.Selenium.Interactions;
-using System;
 using System.Threading;
-using static System.Collections.Specialized.BitVector32;
 
 namespace Files.InteractionTests.Tests
 {
@@ -13,8 +11,6 @@ namespace Files.InteractionTests.Tests
 		[TestCleanup]
 		public void Cleanup()
 		{
-			DeleteFolderTest();
-
 			// Navigate back home
 			TestHelper.InvokeButtonById("Home");
 		}
@@ -29,6 +25,8 @@ namespace Files.InteractionTests.Tests
 			RenameFolderTest();
 
 			CopyPasteFolderTest();
+
+			DeleteFolderTest();
 		}
 
 		/// <summary>
@@ -38,6 +36,9 @@ namespace Files.InteractionTests.Tests
 		{
 			// Click on the desktop item in the sidebar
 			TestHelper.InvokeButtonById("Desktop");
+
+			// Wait for the desktop folder to load
+			Thread.Sleep(2000);
 		}
 
 
@@ -49,8 +50,14 @@ namespace Files.InteractionTests.Tests
 			// Click the "New" button on the toolbar
 			TestHelper.InvokeButtonById("InnerNavigationToolbarNewButton");
 
+			// Wait for the flyout to load
+			Thread.Sleep(1000);
+
 			// Click the "Folder" item from the menu flyout
 			TestHelper.InvokeButtonById("InnerNavigationToolbarNewFolderButton");
+
+			// Wait for the content dialog to load
+			Thread.Sleep(3000);
 
 			// Check for accessibility issues in the new folder prompt
 			AxeHelper.AssertNoAccessibilityErrors();
@@ -64,7 +71,7 @@ namespace Files.InteractionTests.Tests
 			action.SendKeys(Keys.Enter).Perform();
 
 			// Wait for folder to be created
-			Thread.Sleep(1000);
+			Thread.Sleep(3000);
 
 			// Check for accessibility issues in the file area
 			AxeHelper.AssertNoAccessibilityErrors();
@@ -87,7 +94,7 @@ namespace Files.InteractionTests.Tests
 			action.SendKeys(Keys.Enter).Perform();
 
 			// Wait for the folder to be renamed
-			Thread.Sleep(1000);
+			Thread.Sleep(3000);
 		}
 
 		/// <summary>
@@ -99,13 +106,13 @@ namespace Files.InteractionTests.Tests
 			TestHelper.InvokeButtonById("InnerNavigationToolbarCopyButton");
 
 			// Wait for folder to be copied
-			Thread.Sleep(1000);
+			Thread.Sleep(3000);
 
 			// Click the "paste" button on the toolbar
 			TestHelper.InvokeButtonById("InnerNavigationToolbarPasteButton");
 
 			// Wait for folder to be pasted
-			Thread.Sleep(1000);
+			Thread.Sleep(3000);
 		}
 
 		/// <summary>
@@ -115,10 +122,10 @@ namespace Files.InteractionTests.Tests
 		{
 			// Select the "Renamed Folder" folder and clicks the "delete" button on the toolbar
 			TestHelper.InvokeButtonByName("Renamed Folder");
-			TestHelper.InvokeButtonById("Delete");
+			TestHelper.InvokeButtonById("InnerNavigationToolbarDeleteButton");
 
 			// Wait for prompt to show
-			Thread.Sleep(1000);
+			Thread.Sleep(3000);
 
 			// Check for accessibility issues in the confirm delete prompt
 			AxeHelper.AssertNoAccessibilityErrors();
@@ -130,10 +137,10 @@ namespace Files.InteractionTests.Tests
 
 			// Select the "Renamed Folder - Copy" folder and clicks the "delete" button on the toolbar
 			TestHelper.InvokeButtonByName("Renamed Folder - Copy");
-			TestHelper.InvokeButtonById("Delete");
+			TestHelper.InvokeButtonById("InnerNavigationToolbarDeleteButton");
 
 			// Wait for prompt to show
-			Thread.Sleep(1000);
+			Thread.Sleep(3000);
 
 			// Check for accessibility issues in the confirm delete prompt
 			AxeHelper.AssertNoAccessibilityErrors();
@@ -143,7 +150,7 @@ namespace Files.InteractionTests.Tests
 			action.SendKeys(Keys.Enter).Perform();
 
 			// Wait for items to finish being deleted
-			Thread.Sleep(1000);
+			Thread.Sleep(3000);
 		}
 	}
 }

@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.DependencyInjection;
 using Files.App.Extensions;
 using Files.App.Filesystem.StorageItems;
 using Files.App.Helpers;
+using Files.Backend.Helpers;
 using Files.Backend.Services.Settings;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
@@ -262,7 +263,7 @@ namespace Files.App.Filesystem.StorageEnumerators
 			{
 				if (file is ShortcutStorageFile linkFile)
 				{
-					var isUrl = linkFile.Name.EndsWith(".url", StringComparison.OrdinalIgnoreCase);
+					var isUrl = FileExtensionHelpers.IsWebLinkFile(linkFile.Name);
 					return new ShortcutItem(file.FolderRelativeId)
 					{
 						PrimaryItemAttribute = StorageItemTypes.File,

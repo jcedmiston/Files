@@ -1,24 +1,52 @@
 using Files.App.UserControls;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace Files.App.ViewModels
 {
+	/// <summary>
+	/// This class is intended to be used with ContextFlyoutItemHelper and ItemModelListToContextFlyoutHelper.
+	/// ContextFlyoutItemHelper creates a list of ContextMenuFlyoutItemViewModels representing various commands to be displayed
+	/// in a context menu or a command bar. ItemModelListToContextFlyoutHelper has functions that take in said list, and converts
+	/// it to a context menu or command bar to be displayed on the window.
+	///
+	/// Example:
+	/// 1) user right clicks
+	/// 2) models <- ContextFlyoutItemHelper.GetItemContextCommandsWithoutShellItems()
+	/// 3) menu <- ItemModelListToContextFlyoutHelper.GetMenuFlyoutItemsFromModel(models)
+	/// 4) menu.Open()
+	/// <see cref="Files.App.Helpers.ContextFlyoutItemHelper"/>
+	/// <see cref="Files.App.Helpers.ContextFlyouts.ItemModelListToContextFlyoutHelper"/>
+	/// </summary>
 	public class ContextMenuFlyoutItemViewModel
 	{
 		public bool ShowItem { get; set; } = true;
+
 		public ICommand Command { get; set; }
+
 		public object CommandParameter { get; set; }
+
 		public string Glyph { get; set; }
+
 		public string GlyphFontFamilyName { get; set; }
+
 		public string KeyboardAcceleratorTextOverride { get; set; }
+
 		public string Text { get; set; }
+
 		public object Tag { get; set; }
+
 		public ItemType ItemType { get; set; }
-		public bool IsSubItem { get; set; }
+
+		public Func<Task> LoadSubMenuAction { get; set; }
+
 		public List<ContextMenuFlyoutItemViewModel> Items { get; set; }
+
 		public BitmapImage BitmapIcon { get; set; }
 
 		/// <summary>
@@ -52,7 +80,9 @@ namespace Files.App.ViewModels
 		public bool ShowInZipPage { get; set; }
 
 		public KeyboardAccelerator KeyboardAccelerator { get; set; }
+
 		public bool IsChecked { get; set; }
+
 		public bool IsEnabled { get; set; } = true;
 
 		/// <summary>
@@ -64,7 +94,7 @@ namespace Files.App.ViewModels
 
 		public bool CollapseLabel { get; set; }
 
-		public ColoredIconModel ColoredIcon { get; set; }
+		public OpacityIconModel OpacityIcon { get; set; }
 
 		public bool ShowLoadingIndicator { get; set; }
 
@@ -79,17 +109,15 @@ namespace Files.App.ViewModels
 		SplitButton,
 	}
 
-	public struct ColoredIconModel
+	public struct OpacityIconModel
 	{
-		public string OverlayLayerGlyph { get; set; }
-		public string BaseLayerGlyph { get; set; }
+		public string OpacityIconStyle { get; set; }
 
-		public ColoredIcon ToColoredIcon() => new()
+		public OpacityIcon ToOpacityIcon() => new()
 		{
-			OverlayLayerGlyph = OverlayLayerGlyph,
-			BaseLayerGlyph = BaseLayerGlyph,
+			Style = (Style)Application.Current.Resources[OpacityIconStyle],
 		};
 
-		public bool IsValid => !string.IsNullOrEmpty(BaseLayerGlyph);
+		public bool IsValid => !string.IsNullOrEmpty(OpacityIconStyle);
 	}
 }

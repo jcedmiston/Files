@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Files.Backend.Extensions;
 using Files.Backend.Messages;
 using Files.Backend.Services;
+using Files.Backend.Services.Settings;
 using Files.Shared.Enums;
 using Files.Shared.Extensions;
 using System;
@@ -17,6 +18,8 @@ namespace Files.Backend.ViewModels.Dialogs.FileSystemDialog
 {
 	public sealed class FileSystemDialogViewModel : BaseDialogViewModel, IRecipient<FileSystemDialogOptionChangedMessage>
 	{
+		private IUserSettingsService UserSettingsService { get; } = Ioc.Default.GetRequiredService<IUserSettingsService>();
+
 		private readonly CancellationTokenSource _dialogClosingCts;
 
 		private readonly IMessenger _messenger;
@@ -61,15 +64,15 @@ namespace Files.Backend.ViewModels.Dialogs.FileSystemDialog
 
 		private FileSystemDialogViewModel(FileSystemDialogMode fileSystemDialogMode, IEnumerable<BaseFileSystemDialogItemViewModel> items)
 		{
-			this.FileSystemDialogMode = fileSystemDialogMode;
-			this._dialogClosingCts = new();
-			this._messenger = new WeakReferenceMessenger();
-			this._messenger.Register<FileSystemDialogOptionChangedMessage>(this);
+			FileSystemDialogMode = fileSystemDialogMode;
+			_dialogClosingCts = new();
+			_messenger = new WeakReferenceMessenger();
+			_messenger.Register<FileSystemDialogOptionChangedMessage>(this);
 			foreach (var item in items)
 			{
 				item.Messenger = _messenger;
 			}
-			this.Items = new(items);
+			Items = new(items);
 
 			SecondaryButtonClickCommand = new RelayCommand(SecondaryButtonClick);
 		}
@@ -85,7 +88,7 @@ namespace Files.Backend.ViewModels.Dialogs.FileSystemDialog
 			{
 				foreach (var item in Items)
 				{
-					if (item is FileSystemDialogConflictItemViewModel conflictItem)
+					if (item is FileSystemDialogConflictItemViewModel conflictItem && conflictItem.ConflictResolveOption != FileNameConflictResolveOptionType.None)
 					{
 						conflictItem.ConflictResolveOption = e;
 					}
@@ -102,15 +105,23 @@ namespace Files.Backend.ViewModels.Dialogs.FileSystemDialog
 
 		public void Receive(FileSystemDialogOptionChangedMessage message)
 		{
-			if (Items.Count == 1)
+			if (message.Value.ConflictResolveOption != FileNameConflictResolveOptionType.None)
 			{
-				AggregatedResolveOption = message.Value.ConflictResolveOption;
-			}
-			else
-			{
+				var itemsWithoutNone = Items.Where(x => (x as FileSystemDialogConflictItemViewModel)!.ConflictResolveOption != FileNameConflictResolveOptionType.None);
 				// If all items have the same resolve option -- set the aggregated option to that choice
-				var first = (Items.First() as FileSystemDialogConflictItemViewModel)!.ConflictResolveOption;
-				AggregatedResolveOption = Items.All(x => (x as FileSystemDialogConflictItemViewModel)!.ConflictResolveOption == first) ? first : FileNameConflictResolveOptionType.None;
+				var first = (itemsWithoutNone.First() as FileSystemDialogConflictItemViewModel)!.ConflictResolveOption;
+				AggregatedResolveOption = itemsWithoutNone.All(x => (x as FileSystemDialogConflictItemViewModel)!.ConflictResolveOption == first) ? first : FileNameConflictResolveOptionType.None;
+			}
+		}
+
+		public FileNameConflictResolveOptionType LoadConflictResolveOption() => UserSettingsService.PreferencesSettingsService.ConflictsResolveOption;
+
+		public void SaveConflictResolveOption()
+		{
+			if (AggregatedResolveOption != FileNameConflictResolveOptionType.None
+				&& AggregatedResolveOption != UserSettingsService.PreferencesSettingsService.ConflictsResolveOption)
+			{
+				UserSettingsService.PreferencesSettingsService.ConflictsResolveOption = AggregatedResolveOption;
 			}
 		}
 
@@ -229,7 +240,7 @@ namespace Files.Backend.ViewModels.Dialogs.FileSystemDialog
 
 		private static Task LoadItemsIcon(IEnumerable<BaseFileSystemDialogItemViewModel> items, CancellationToken token)
 		{
-			var imagingService = Ioc.Default.GetRequiredService<IImagingService>();
+			var imagingService = Ioc.Default.GetRequiredService<IImageService>();
 			var threadingService = Ioc.Default.GetRequiredService<IThreadingService>();
 
 			return items.ParallelForEachAsync(async (item) =>

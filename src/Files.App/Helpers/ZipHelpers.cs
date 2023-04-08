@@ -1,4 +1,6 @@
+using Files.App.Filesystem;
 using Files.App.Filesystem.StorageItems;
+using Microsoft.Extensions.Logging;
 using SevenZip;
 using System;
 using System.Collections.Generic;
@@ -20,45 +22,6 @@ namespace Files.App.Helpers
 			});
 		}
 
-		public static async Task<bool> CompressMultipleToArchive(string[] sourceFolders, string archive, IProgress<float> progressDelegate)
-		{
-			SevenZipCompressor compressor = new()
-			{
-				ArchiveFormat = OutArchiveFormat.Zip,
-				CompressionLevel = CompressionLevel.High,
-				EventSynchronization = EventSynchronizationStrategy.AlwaysAsynchronous,
-				FastCompression = true,
-				IncludeEmptyDirectories = true,
-				PreserveDirectoryRoot = sourceFolders.Length > 1
-			};
-
-			bool noErrors = true;
-			try
-			{
-				for (int i = 0; i < sourceFolders.Length; i++)
-				{
-					if (i > 0)
-						compressor.CompressionMode = CompressionMode.Append;
-
-					var item = sourceFolders[i];
-					if (File.Exists(item))
-						await compressor.CompressFilesAsync(archive, item);
-					else if (Directory.Exists(item))
-						await compressor.CompressDirectoryAsync(item, archive);
-
-					float percentage = (i + 1.0f) / sourceFolders.Length * 100.0f;
-					progressDelegate?.Report(percentage);
-				}
-			}
-			catch (Exception ex)
-			{
-				App.Logger.Warn(ex, $"Error compressing folder: {archive}");
-				NativeFileOperationsHelper.DeleteFileFromApp(archive);
-				noErrors = false;
-			}
-			return noErrors;
-		}
-
 		public static async Task<bool> IsArchiveEncrypted(BaseStorageFile archive)
 		{
 			using SevenZipExtractor? zipFile = await GetZipFile(archive);
@@ -68,7 +31,7 @@ namespace Files.App.Helpers
 			return zipFile.ArchiveFileData.Any(file => file.Encrypted || file.Method.Contains("Crypto") || file.Method.Contains("AES"));
 		}
 
-		public static async Task ExtractArchive(BaseStorageFile archive, BaseStorageFolder destinationFolder, string password, IProgress<float> progressDelegate, CancellationToken cancellationToken)
+		public static async Task ExtractArchive(BaseStorageFile archive, BaseStorageFolder destinationFolder, string password, IProgress<FileSystemProgress> progress, CancellationToken cancellationToken)
 		{
 			using SevenZipExtractor? zipFile = await GetZipFile(archive, password);
 			if (zipFile is null)
@@ -95,7 +58,7 @@ namespace Files.App.Helpers
 			}
 			catch (Exception ex)
 			{
-				App.Logger.Warn(ex, $"Error transforming zip names into: {destinationFolder.Path}\n" +
+				App.Logger.LogWarning(ex, $"Error transforming zip names into: {destinationFolder.Path}\n" +
 					$"Directories: {string.Join(", ", directoryEntries.Select(x => x.FileName))}\n" +
 					$"Files: {string.Join(", ", fileEntries.Select(x => x.FileName))}");
 				return;
@@ -113,8 +76,6 @@ namespace Files.App.Helpers
 					}
 				}
 
-				fileEntries.RemoveAll(file => file.FileName == dir);
-
 				if (cancellationToken.IsCancellationRequested) // Check if canceled
 					return;
 			}
@@ -127,6 +88,9 @@ namespace Files.App.Helpers
 			byte[] buffer = new byte[4096];
 			int entriesAmount = fileEntries.Count;
 			int entriesFinished = 0;
+
+			FileSystemProgress fsProgress = new(progress, true, Shared.Enums.FileSystemStatusCode.InProgress, entriesAmount);
+			fsProgress.Report();
 
 			foreach (var entry in fileEntries)
 			{
@@ -148,14 +112,14 @@ namespace Files.App.Helpers
 					}
 					catch (Exception ex)
 					{
-						App.Logger.Warn(ex, $"Error extracting file: {filePath}");
+						App.Logger.LogWarning(ex, $"Error extracting file: {filePath}");
 						return; // TODO: handle error
 					}
 				}
 
 				entriesFinished++;
-				float percentage = (float)((float)entriesFinished / (float)entriesAmount) * 100.0f;
-				progressDelegate?.Report(percentage);
+				fsProgress.ProcessedItemsCount = entriesFinished;
+				fsProgress.Report();
 			}
 		}
 	}

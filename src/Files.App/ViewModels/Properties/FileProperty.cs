@@ -35,7 +35,8 @@ namespace Files.App.ViewModels.Properties
 		/// <summary>
 		/// The name of the section to display
 		/// </summary>
-		public string Section => SectionResource?.GetLocalizedResource();
+		public string Section
+			=> SectionResource?.GetLocalizedResource();
 
 		/// <summary>
 		/// The name of the string resource for the section name
@@ -155,6 +156,7 @@ namespace Files.App.ViewModels.Properties
 
 			var propsToSave = new Dictionary<string, object>();
 			propsToSave.Add(Property, Converter.ConvertBack(Value, null, null, null));
+
 			return file.Properties.SavePropertiesAsync(propsToSave).AsTask();
 		}
 
@@ -248,7 +250,7 @@ namespace Files.App.ViewModels.Properties
 		/// If you would like to add more properties, define them in the PropertiesInformation file, then
 		/// add the string resources to Strings/en-Us/Resources.resw file
 		/// A full list of file properties and their information can be found here
-		/// <a href="https://docs.microsoft.com/windows/win32/properties/props"/>.
+		/// <a href="https://learn.microsoft.com/windows/win32/properties/props"/>.
 		/// </summary>
 		/// <param name="file">The file whose properties you wish to obtain</param>
 		/// <param name="path">The path to the json file of properties to be loaded</param>
@@ -275,6 +277,7 @@ namespace Files.App.ViewModels.Properties
 					propsToGet.Add(prop.Property);
 				}
 			}
+
 #if DEBUG
 			// This makes it much easier to debug issues with the property list
 			var keyValuePairs = new Dictionary<string, object>();
@@ -301,6 +304,7 @@ namespace Files.App.ViewModels.Properties
                 keyValuePairs = await file.Properties.RetrievePropertiesAsync(propsToGet);
             }
 #endif
+
 			foreach (var prop in list)
 			{
 				if (!string.IsNullOrEmpty(prop.Property))

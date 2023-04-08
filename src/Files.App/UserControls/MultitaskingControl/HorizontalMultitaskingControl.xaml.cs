@@ -1,10 +1,13 @@
+using CommunityToolkit.Mvvm.DependencyInjection;
+using CommunityToolkit.WinUI.UI;
+using Files.App.Commands;
 using Files.App.Extensions;
 using Files.App.Helpers;
 using Files.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Shapes;
 using System;
-using System.Linq;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 
@@ -14,6 +17,10 @@ namespace Files.App.UserControls.MultitaskingControl
 {
 	public sealed partial class HorizontalMultitaskingControl : BaseMultitaskingControl
 	{
+		public static event EventHandler<TabItem?>? SelectedTabItemChanged;
+
+		private ICommandManager Commands { get; } = Ioc.Default.GetRequiredService<ICommandManager>();
+
 		private readonly DispatcherTimer tabHoverTimer = new DispatcherTimer();
 		private TabViewItem? hoveredTabViewItem;
 
@@ -26,7 +33,8 @@ namespace Files.App.UserControls.MultitaskingControl
 			var flowDirectionSetting = new Microsoft.Windows.ApplicationModel.Resources.ResourceManager().CreateResourceContext().QualifierValues["LayoutDirection"];
 
 			var appWindowTitleBar = App.GetAppWindow(App.Window).TitleBar;
-			RightPaddingColumn.Width = (flowDirectionSetting == "RTL") ? new GridLength(appWindowTitleBar.LeftInset) : new GridLength(appWindowTitleBar.RightInset);
+			double rightPaddingColumnWidth = flowDirectionSetting is "RTL" ? appWindowTitleBar.LeftInset : appWindowTitleBar.RightInset;
+			RightPaddingColumn.Width = new GridLength(rightPaddingColumnWidth >= 0 ? rightPaddingColumnWidth : 0);
 		}
 
 		private void HorizontalTabView_TabItemsChanged(TabView sender, Windows.Foundation.Collections.IVectorChangedEventArgs args)
@@ -189,25 +197,11 @@ namespace Files.App.UserControls.MultitaskingControl
 		private void TabItemContextMenu_Opening(object sender, object e)
 		{
 			MenuItemMoveTabToNewWindow.IsEnabled = Items.Count > 1;
-			MenuItemReopenClosedTab.IsEnabled = RecentlyClosedTabs.Any();
+			SelectedTabItemChanged?.Invoke(null, ((MenuFlyout)sender).Target.DataContext as TabItem);
 		}
-
-		private void MenuItemCloseTabsToTheLeft_DataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args)
+		private void TabItemContextMenu_Closing(object sender, object e)
 		{
-			TabItem tabItem = (TabItem)args.NewValue;
-			MenuItemCloseTabsToTheLeft.IsEnabled = MainPageViewModel.AppInstances.IndexOf(tabItem) > 0;
-		}
-
-		private void MenuItemCloseTabsToTheRight_DataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args)
-		{
-			TabItem tabItem = (TabItem)args.NewValue;
-			MenuItemCloseTabsToTheRight.IsEnabled = MainPageViewModel.AppInstances.IndexOf(tabItem) < MainPageViewModel.AppInstances.Count - 1;
-		}
-
-		private void MenuItemCloseOtherTabs_DataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args)
-		{
-			TabItem tabItem = (TabItem)args.NewValue;
-			MenuItemCloseOtherTabs.IsEnabled = MainPageViewModel.AppInstances.Count > 1;
+			SelectedTabItemChanged?.Invoke(null, null);
 		}
 
 		public override DependencyObject ContainerFromItem(ITabItem item) => HorizontalTabView.ContainerFromItem(item);
@@ -232,6 +226,19 @@ namespace Files.App.UserControls.MultitaskingControl
 		public static readonly DependencyProperty TabStripVisibilityProperty =
 			DependencyProperty.Register("TabStripVisibility", typeof(Visibility), typeof(HorizontalMultitaskingControl), new PropertyMetadata(Visibility.Visible));
 
-		public Grid DragArea => DragAreaGrid;
+		public Rectangle DragArea => DragAreaRectangle;
+
+		private void TabViewItem_Loaded(object sender, RoutedEventArgs e)
+		{
+			if (sender is TabViewItem tvi && tvi.FindDescendant("IconControl") is ContentControl control)
+			{
+				control.Content = (tvi.IconSource as ImageIconSource).CreateIconElement();
+				tvi.RegisterPropertyChangedCallback(TabViewItem.IconSourceProperty, (s, args) =>
+				{
+					if (s is TabViewItem tabViewItem && tabViewItem.FindDescendant("IconControl") is ContentControl iconControl)
+						iconControl.Content = (tabViewItem.IconSource as ImageIconSource).CreateIconElement();
+				});
+			}
+		}
 	}
 }

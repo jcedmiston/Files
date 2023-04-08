@@ -5,6 +5,7 @@ using Files.App.Filesystem.StorageItems;
 using Files.App.Helpers;
 using Files.Backend.Services.Settings;
 using Files.Shared.Extensions;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -24,7 +25,7 @@ namespace Files.App.Filesystem.Search
 	{
 		private IUserSettingsService UserSettingsService { get; } = Ioc.Default.GetRequiredService<IUserSettingsService>();
 
-		private IFileTagsSettingsService FileTagsSettingsService { get; } = Ioc.Default.GetRequiredService<IFileTagsSettingsService>();
+		private readonly IFileTagsSettingsService fileTagsSettingsService = Ioc.Default.GetRequiredService<IFileTagsSettingsService>();
 
 		private const uint defaultStepSize = 500;
 
@@ -84,7 +85,7 @@ namespace Files.App.Filesystem.Search
 				{
 					return AddItemsAsyncForLibrary(library, results, token);
 				}
-				else if (Folder == "Home".GetLocalizedResource())
+				else if (Folder == "Home")
 				{
 					return AddItemsAsyncForHome(results, token);
 				}
@@ -95,7 +96,7 @@ namespace Files.App.Filesystem.Search
 			}
 			catch (Exception e)
 			{
-				App.Logger.Warn(e, "Search failure");
+				App.Logger.LogWarning(e, "Search failure");
 			}
 
 			return Task.CompletedTask;
@@ -119,7 +120,7 @@ namespace Files.App.Filesystem.Search
 				{
 					await AddItemsAsyncForLibrary(library, results, token);
 				}
-				else if (Folder == "Home".GetLocalizedResource())
+				else if (Folder == "Home")
 				{
 					await AddItemsAsyncForHome(results, token);
 				}
@@ -130,7 +131,7 @@ namespace Files.App.Filesystem.Search
 			}
 			catch (Exception e)
 			{
-				App.Logger.Warn(e, "Search failure");
+				App.Logger.LogWarning(e, "Search failure");
 			}
 
 			return results;
@@ -162,7 +163,7 @@ namespace Files.App.Filesystem.Search
 					}
 					catch (Exception ex)
 					{
-						App.Logger.Warn(ex, "Error creating ListedItem from StorageItem");
+						App.Logger.LogWarning(ex, "Error creating ListedItem from StorageItem");
 					}
 
 					if (results.Count == 32 || results.Count % 300 == 0 /*|| sampler.CheckNow()*/)
@@ -189,17 +190,15 @@ namespace Files.App.Filesystem.Search
 		{
 			//var sampler = new IntervalSampler(500);
 			var tags = AQSQuery.Substring("tag:".Length)?.Split(',').Where(t => !string.IsNullOrWhiteSpace(t))
-				.SelectMany(t => FileTagsSettingsService.GetTagsByName(t), (_, t) => t.Uid).ToHashSet();
+				.SelectMany(t => fileTagsSettingsService.GetTagsByName(t), (_, t) => t.Uid).ToHashSet();
 			if (tags?.Any() != true)
 			{
 				return;
 			}
-			List<Common.FileTagsDb.TaggedFile>? matches;
-			using (var dbInstance = FileTagsHelper.GetDbInstance())
-			{
-				matches = dbInstance.GetAllUnderPath(folder)
-								.Where(x => tags.All(x.Tags.Contains)).ToList();
-			}
+
+			var dbInstance = FileTagsHelper.GetDbInstance();
+			var matches = dbInstance.GetAllUnderPath(folder)
+				.Where(x => tags.All(x.Tags.Contains));
 
 			foreach (var match in matches)
 			{
@@ -244,7 +243,7 @@ namespace Files.App.Filesystem.Search
 					}
 					catch (Exception ex)
 					{
-						App.Logger.Warn(ex, "Error creating ListedItem from StorageItem");
+						App.Logger.LogWarning(ex, "Error creating ListedItem from StorageItem");
 					}
 				}
 

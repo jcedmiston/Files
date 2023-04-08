@@ -1,5 +1,6 @@
 using Files.App.UserControls;
 using Files.App.ViewModels;
+using Files.Shared.Extensions;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -10,19 +11,36 @@ using System.Linq;
 
 namespace Files.App.Helpers.ContextFlyouts
 {
+	/// <summary>
+	/// This helper class is used to convert ContextMenuFlyoutItemViewModels into a control that can be displayed to the user.
+	/// This is for use in scenarios where XAML templates and data binding will not suffice.
+	/// <see cref="Files.App.ViewModels.ContextMenuFlyoutItemViewModel"/>
+	/// </summary>
 	public static class ItemModelListToContextFlyoutHelper
 	{
-		public static List<MenuFlyoutItemBase> GetMenuFlyoutItemsFromModel(List<ContextMenuFlyoutItemViewModel> items)
+		public static List<MenuFlyoutItemBase>? GetMenuFlyoutItemsFromModel(List<ContextMenuFlyoutItemViewModel>? items)
 		{
 			if (items is null)
-			{
 				return null;
-			}
 
 			var flyout = new List<MenuFlyoutItemBase>();
 			items.ForEach(i =>
 			{
-				flyout.Add(GetMenuItem(i));
+				var menuItem = GetMenuItem(i);
+				flyout.Add(menuItem);
+				if (menuItem is MenuFlyoutSubItem menuFlyoutSubItem && menuFlyoutSubItem.Items.Count == 0)
+				{
+					// Add a placeholder
+					menuItem.Visibility = Visibility.Collapsed;
+
+					var placeolder = new MenuFlyoutItem()
+					{
+						Text = menuFlyoutSubItem.Text,
+						Tag = menuFlyoutSubItem.Tag,
+						Icon = menuFlyoutSubItem.Icon,
+					};
+					flyout.Add(placeolder);
+				}
 			});
 			return flyout;
 		}
@@ -32,10 +50,8 @@ namespace Files.App.Helpers.ContextFlyouts
 			var primaryModels = items.Where(i => i.IsPrimary).ToList();
 			var secondaryModels = items.Except(primaryModels).ToList();
 
-			if (secondaryModels.Last().ItemType == ItemType.Separator)
-			{
+			if (!secondaryModels.IsEmpty() && secondaryModels.Last().ItemType is ItemType.Separator)
 				secondaryModels.RemoveAt(secondaryModels.Count - 1);
-			}
 
 			var primary = new List<ICommandBarElement>();
 			primaryModels.ForEach(i => primary.Add(GetCommandBarItem(i)));
@@ -57,7 +73,7 @@ namespace Files.App.Helpers.ContextFlyouts
 			return elements;
 		}
 
-		private static MenuFlyoutItemBase GetMenuItem(ContextMenuFlyoutItemViewModel item)
+		public static MenuFlyoutItemBase GetMenuItem(ContextMenuFlyoutItemViewModel item)
 		{
 			return item.ItemType switch
 			{
@@ -66,25 +82,22 @@ namespace Files.App.Helpers.ContextFlyouts
 			};
 		}
 
-		private static MenuFlyoutItemBase GetMenuFlyoutItem(ContextMenuFlyoutItemViewModel item, bool isToggle = false)
+		private static MenuFlyoutItemBase GetMenuFlyoutItem(ContextMenuFlyoutItemViewModel item)
 		{
-			if (item.Items?.Count > 0)
+			if (item.Items is not null)
 			{
 				var flyoutSubItem = new MenuFlyoutSubItem()
 				{
 					Text = item.Text,
 					Tag = item.Tag,
 				};
-				item.Items?.ForEach(i =>
+				item.Items.ForEach(i =>
 				{
 					flyoutSubItem.Items.Add(GetMenuItem(i));
 				});
 				return flyoutSubItem;
 			}
-			else
-			{
-				return GetItem(item);
-			}
+			return GetItem(item);
 		}
 
 		private static MenuFlyoutItemBase GetItem(ContextMenuFlyoutItemViewModel i)
@@ -110,7 +123,7 @@ namespace Files.App.Helpers.ContextFlyouts
 			}
 			MenuFlyoutItem flyoutItem;
 
-			if (i.ItemType == ItemType.Toggle)
+			if (i.ItemType is ItemType.Toggle)
 			{
 				flyoutItem = new ToggleMenuFlyoutItem()
 				{
@@ -120,6 +133,10 @@ namespace Files.App.Helpers.ContextFlyouts
 					CommandParameter = i.CommandParameter,
 					IsChecked = i.IsChecked,
 				};
+				if (!string.IsNullOrEmpty(i.Glyph))
+				{
+					flyoutItem.Icon = new FontIcon{ Glyph = i.Glyph };
+				}
 			}
 			else
 			{
@@ -145,15 +162,11 @@ namespace Files.App.Helpers.ContextFlyouts
 			}
 
 			if (i.KeyboardAccelerator is not null)
-			{
 				flyoutItem.KeyboardAccelerators.Add(i.KeyboardAccelerator);
-			}
 			flyoutItem.IsEnabled = i.IsEnabled;
 
 			if (i.KeyboardAcceleratorTextOverride is not null)
-			{
 				flyoutItem.KeyboardAcceleratorTextOverride = i.KeyboardAcceleratorTextOverride;
-			}
 
 			return flyoutItem;
 		}
@@ -174,50 +187,44 @@ namespace Files.App.Helpers.ContextFlyouts
 		private static ICommandBarElement GetCommandBarButton(ContextMenuFlyoutItemViewModel item)
 		{
 			ICommandBarElement element;
-			FontIcon icon = null;
+			FontIcon? icon = null;
 			if (!string.IsNullOrEmpty(item.Glyph))
 			{
 				icon = new FontIcon
 				{
 					Glyph = item.Glyph,
 				};
+
+				if (!string.IsNullOrEmpty(item.GlyphFontFamilyName))
+				{
+					var fontFamily = App.Current.Resources[item.GlyphFontFamilyName] as FontFamily;
+					icon.FontFamily = fontFamily;
+				}
 			}
 
-			if (!string.IsNullOrEmpty(item.GlyphFontFamilyName))
-			{
-				var fontFamily = App.Current.Resources[item.GlyphFontFamilyName] as FontFamily;
-				icon.FontFamily = fontFamily;
-			}
-
-			MenuFlyout ctxFlyout = null;
+			MenuFlyout? ctxFlyout = null;
 			if ((item.Items is not null && item.Items.Count > 0) || item.ID == "ItemOverflow")
 			{
 				ctxFlyout = new MenuFlyout();
-				GetMenuFlyoutItemsFromModel(item.Items).ForEach(i => ctxFlyout.Items.Add(i));
+				GetMenuFlyoutItemsFromModel(item.Items)?.ForEach(i => ctxFlyout.Items.Add(i));
 			}
 
-			UIElement content = null;
+			UIElement? content = null;
 			if (item.BitmapIcon is not null)
-			{
 				content = new Image()
 				{
 					Source = item.BitmapIcon,
 				};
-			}
-			else if (item.ColoredIcon.IsValid)
-			{
-				content = item.ColoredIcon.ToColoredIcon();
-			}
+			else if (item.OpacityIcon.IsValid)
+				content = item.OpacityIcon.ToOpacityIcon();
 			else if (item.ShowLoadingIndicator)
-			{
-				content = new Microsoft.UI.Xaml.Controls.ProgressRing()
+				content = new ProgressRing()
 				{
 					IsIndeterminate = true,
 					IsActive = true,
 				};
-			}
 
-			if (item.ItemType == ItemType.Toggle)
+			if (item.ItemType is ItemType.Toggle)
 			{
 				element = new AppBarToggleButton()
 				{
@@ -232,14 +239,13 @@ namespace Files.App.Helpers.ContextFlyouts
 					Visibility = item.IsHidden ? Visibility.Collapsed : Visibility.Visible,
 				};
 
-				if (icon is not null)
+				if (element is AppBarToggleButton toggleButton)
 				{
-					(element as AppBarToggleButton).Icon = icon;
-				}
+					if (icon is not null)
+						toggleButton.Icon = icon;
 
-				if (item.IsPrimary || item.CollapseLabel)
-				{
-					(element as AppBarToggleButton).SetValue(ToolTipService.ToolTipProperty, item.Text);
+					if (item.IsPrimary || item.CollapseLabel)
+						toggleButton.SetValue(ToolTipService.ToolTipProperty, item.Text);
 				}
 			}
 			else
@@ -257,14 +263,13 @@ namespace Files.App.Helpers.ContextFlyouts
 					Visibility = item.IsHidden ? Visibility.Collapsed : Visibility.Visible,
 				};
 
-				if (icon is not null)
+				if (element is AppBarButton button)
 				{
-					(element as AppBarButton).Icon = icon;
-				}
+					if (icon is not null)
+						button.Icon = icon;
 
-				if (item.IsPrimary || item.CollapseLabel)
-				{
-					(element as AppBarButton).SetValue(ToolTipService.ToolTipProperty, item.Text);
+					if (item.IsPrimary || item.CollapseLabel)
+						button.SetValue(ToolTipService.ToolTipProperty, item.Text);
 				}
 			}
 

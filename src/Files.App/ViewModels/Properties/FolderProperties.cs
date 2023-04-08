@@ -6,6 +6,7 @@ using Files.App.Filesystem;
 using Files.App.Filesystem.StorageItems;
 using Files.App.Helpers;
 using Files.App.Shell;
+using Microsoft.Extensions.Logging;
 using Microsoft.UI.Dispatching;
 using System;
 using System.IO;
@@ -18,8 +19,12 @@ namespace Files.App.ViewModels.Properties
 	{
 		public ListedItem Item { get; }
 
-		public FolderProperties(SelectedItemsPropertiesViewModel viewModel, CancellationTokenSource tokenSource,
-			DispatcherQueue coreDispatcher, ListedItem item, IShellPage instance)
+		public FolderProperties(
+			SelectedItemsPropertiesViewModel viewModel,
+			CancellationTokenSource tokenSource,
+			DispatcherQueue coreDispatcher,
+			ListedItem item,
+			IShellPage instance)
 		{
 			ViewModel = viewModel;
 			TokenSource = tokenSource;
@@ -61,8 +66,9 @@ namespace Files.App.ViewModels.Properties
 					ViewModel.ShortcutItemOpenLinkCommand = new RelayCommand(async () =>
 					{
 						await App.Window.DispatcherQueue.EnqueueAsync(
-							() => NavigationHelpers.OpenPathInNewTab(Path.GetDirectoryName(ViewModel.ShortcutItemPath)));
-					}, () =>
+							() => NavigationHelpers.OpenPathInNewTab(Path.GetDirectoryName(Environment.ExpandEnvironmentVariables(ViewModel.ShortcutItemPath))));
+					},
+					() =>
 					{
 						return !string.IsNullOrWhiteSpace(ViewModel.ShortcutItemPath);
 					});
@@ -131,6 +137,7 @@ namespace Files.App.ViewModels.Properties
 				{
 					ViewModel.FilesAndFoldersCountVisibility = false;
 				}
+
 				ViewModel.ItemCreatedTimestampVisibility = false;
 				ViewModel.ItemAccessedTimestampVisibility = false;
 				ViewModel.ItemModifiedTimestampVisibility = false;
@@ -159,6 +166,7 @@ namespace Files.App.ViewModels.Properties
 				var size = await CalculateFolderSizeAsync(folderPath, token);
 				return size;
 			});
+
 			try
 			{
 				var folderSize = await fileSizeTask;
@@ -167,8 +175,9 @@ namespace Files.App.ViewModels.Properties
 			}
 			catch (Exception ex)
 			{
-				App.Logger.Warn(ex, ex.Message);
+				App.Logger.LogWarning(ex, ex.Message);
 			}
+
 			ViewModel.ItemSizeProgressVisibility = false;
 
 			SetItemsCountString();

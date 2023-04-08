@@ -31,6 +31,21 @@ namespace Files.Backend.Services.Settings
 		bool ShowFileTagColumn { get; set; }
 
 		/// <summary>
+		/// Gets or sets a value indicating whether or not the date deleted column should be visible by default.
+		/// </summary>
+		bool ShowDateDeletedColumn { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating whether or not the original path column should be visible by default.
+		/// </summary>
+		bool ShowOriginalPathColumn { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating whether or not the sync status column should be visible by default.
+		/// </summary>
+		bool ShowSyncStatusColumn { get; set; }
+
+		/// <summary>
 		/// Gets or sets a value indicating the default layout mode.
 		/// </summary>
 		FolderLayoutModes DefaultLayoutMode { get; set; }
@@ -66,9 +81,24 @@ namespace Files.Backend.Services.Settings
 		double SizeColumnWidth { get; set; }
 
 		/// <summary>
-		/// Enable overriding folder preferencess in individual directories
+		/// Gets or sets a value indicating date deleted column's default width
 		/// </summary>
-		bool EnableOverridingFolderPreferences { get; set; }
+		double DateDeletedColumnWidth { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating sync status column's default width
+		/// </summary>
+		double SyncStatusColumnWidth { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating original path column's default width
+		/// </summary>
+		double OriginalPathColumnWidth { get; set; }
+
+		/// <summary>
+		/// Sync folder preferences across all directories
+		/// </summary>
+		bool SyncFolderPreferencesAcrossDirectories { get; set; }
 
 		/// <summary>
 		/// Gets or sets a value indicating whether or not hidden items should be visible.
@@ -109,5 +139,60 @@ namespace Files.Backend.Services.Settings
 		/// Gets or sets a value indicating whether or not to show folder size.
 		/// </summary>
 		bool CalculateFolderSizes { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating the default sorting option.
+		/// </summary>
+		SortOption DefaultSortOption { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating the default grouping option.
+		/// </summary>
+		GroupOption DefaultGroupOption { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating the default sorting direction.
+		/// </summary>
+		SortDirection DefaultDirectorySortDirection { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating the default grouping direction.
+		/// </summary>
+		SortDirection DefaultDirectoryGroupDirection { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating if directories should be sorted alongside files by.
+		/// </summary>
+		bool DefaultSortDirectoriesAlongsideFiles { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating if file extensions should be displayed.
+		/// </summary>
+		bool ShowFileExtensions { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating if media thumbnails should be displayed.
+		/// </summary>
+		bool ShowThumbnails { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating whether or not to show the delete confirmation dialog when deleting items.
+		/// </summary>
+		DeleteConfirmationPolicies DeleteConfirmationPolicy { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating whether or not to select files and folders when hovering them.
+		/// </summary>
+		bool SelectFilesOnHover { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating if double clicking a blank space should go up a directory.
+		/// </summary>
+		bool DoubleClickToGoUp { get; set; }
+
+		/// <summary>
+		/// Gets or sets a value indicating if a warning dialog show be shown when changing file extensions.
+		/// </summary>
+		bool ShowFileExtensionWarning { get; set; }
 	}
 }

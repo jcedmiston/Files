@@ -1,6 +1,7 @@
 using Files.App.Extensions;
 using Files.App.Filesystem;
 using Files.App.Shell;
+using Files.Backend.Helpers;
 using System;
 using System.Threading.Tasks;
 using Windows.Storage;
@@ -48,7 +49,7 @@ namespace Files.App.Helpers
 
 		public static async Task<byte[]> LoadIconFromPathAsync(string filePath, uint thumbnailSize, ThumbnailMode thumbnailMode, bool isFolder = false)
 		{
-			if (!filePath.EndsWith(".lnk", StringComparison.Ordinal) && !filePath.EndsWith(".url", StringComparison.Ordinal))
+			if (!FileExtensionHelpers.IsShortcutOrUrlFile(filePath))
 			{
 				var item = await StorageHelpers.ToStorageItem<IStorageItem>(filePath);
 				if (item is not null)
