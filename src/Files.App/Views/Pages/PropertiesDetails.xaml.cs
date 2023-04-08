@@ -1,4 +1,4 @@
-﻿using Files.App.Dialogs;
+using Files.App.Dialogs;
 using Files.App.Filesystem;
 using Files.App.Helpers;
 using Files.App.ViewModels.Properties;
@@ -10,24 +10,24 @@ using System.Threading.Tasks;
 
 namespace Files.App.Views
 {
-    public sealed partial class PropertiesDetails : PropertiesTab
-    {
-        public PropertiesDetails()
-        {
-            InitializeComponent();
-        }
+	public sealed partial class PropertiesDetails : PropertiesTab
+	{
+		public PropertiesDetails()
+		{
+			InitializeComponent();
+		}
 
-        protected override void Properties_Loaded(object sender, RoutedEventArgs e)
-        {
-            base.Properties_Loaded(sender, e);
+		protected override void Properties_Loaded(object sender, RoutedEventArgs e)
+		{
+			base.Properties_Loaded(sender, e);
 
-            if (BaseProperties is FileProperties fileProps)
-            {
-                Stopwatch stopwatch = Stopwatch.StartNew();
-                fileProps.GetSystemFileProperties();
-                stopwatch.Stop();
-                Debug.WriteLine(string.Format("System file properties were obtained in {0} milliseconds", stopwatch.ElapsedMilliseconds));
-            }
+			if (BaseProperties is FileProperties fileProps)
+			{
+				Stopwatch stopwatch = Stopwatch.StartNew();
+				fileProps.GetSystemFileProperties();
+				stopwatch.Stop();
+				Debug.WriteLine(string.Format("System file properties were obtained in {0} milliseconds", stopwatch.ElapsedMilliseconds));
+			}
             if (BaseProperties is CombinedProperties combinedProps)
             {
                 Stopwatch stopwatch = Stopwatch.StartNew();
@@ -37,52 +37,58 @@ namespace Files.App.Views
             }
         }
 
-        public override async Task<bool> SaveChangesAsync(ListedItem item)
-        {
-            while (true)
-            {
-                using DynamicDialog dialog = DynamicDialogFactory.GetFor_PropertySaveErrorDialog();
-                try
-                {
-                    if (BaseProperties is FileProperties fileProps)
-                    {
-                        await fileProps.SyncPropertyChangesAsync();
-                    }
-                    else if (BaseProperties is CombinedProperties combinedProps)
-                    {
-                        await combinedProps.SyncPropertyChangesAsync();
-                    }
-                    return true;
-                }
-                catch
-                {
-                    await dialog.TryShowAsync();
-                    switch (dialog.DynamicResult)
-                    {
-                        case DynamicDialogResult.Primary:
-                            break;
+		// WINUI3
+		private static ContentDialog SetContentDialogRoot(ContentDialog contentDialog)
+		{
+			if (Windows.Foundation.Metadata.ApiInformation.IsApiContractPresent("Windows.Foundation.UniversalApiContract", 8))
+			{
+				contentDialog.XamlRoot = App.Window.Content.XamlRoot;
+			}
+			return contentDialog;
+		}
 
-                        case DynamicDialogResult.Secondary:
-                            return true;
+		public override async Task<bool> SaveChangesAsync(ListedItem item)
+		{
+			while (true)
+			{
+				using DynamicDialog dialog = DynamicDialogFactory.GetFor_PropertySaveErrorDialog();
+				try
+				{
+					if (BaseProperties is FileProperties fileProps)
+					{
+						await fileProps.SyncPropertyChangesAsync();
+					}
+					return true;
+				}
+				catch
+				{
+					await SetContentDialogRoot(dialog).TryShowAsync();
+					switch (dialog.DynamicResult)
+					{
+						case DynamicDialogResult.Primary:
+							break;
 
-                        case DynamicDialogResult.Cancel:
-                            return false;
-                    }
-                }
-            }
-        }
+						case DynamicDialogResult.Secondary:
+							return true;
 
-        private async void ClearPropertiesConfirmation_Click(object sender, RoutedEventArgs e)
-        {
-            ClearPropertiesFlyout.Hide();
-            if (BaseProperties is FileProperties fileProps)
-            {
-                await fileProps.ClearPropertiesAsync();
-            }
-        }
+						case DynamicDialogResult.Cancel:
+							return false;
+					}
+				}
+			}
+		}
 
-        public override void Dispose()
-        {
-        }
-    }
+		private async void ClearPropertiesConfirmation_Click(object sender, RoutedEventArgs e)
+		{
+			ClearPropertiesFlyout.Hide();
+			if (BaseProperties is FileProperties fileProps)
+			{
+				await fileProps.ClearPropertiesAsync();
+			}
+		}
+
+		public override void Dispose()
+		{
+		}
+	}
 }

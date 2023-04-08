@@ -319,13 +319,15 @@ namespace Files.App.ViewModels.Properties
 		/// </summary>
 		private static readonly Dictionary<string, Func<object, string>> DisplayFuncs = new Dictionary<string, Func<object, string>>()
 		{
-			{ "DivideBy1000", input => (((uint) input)/1000).ToString() },
+			{ "DivideBy1000", input => (((uint)input)/1000).ToString() },
 			{ "FormatDuration", input => new TimeSpan(Convert.ToInt64(input)).ToString("hh':'mm':'ss")},
 			{ "Fraction" , input => ((double)input).ToFractions(2000)},
 			{ "AddF" , input => $"f/{(double)input}"},
 			{ "AddISO" , input => $"ISO-{(UInt16)input}"},
 			{ "RoundDouble" , input => $"{Math.Round((double)input)}"},
 			{ "UnitMM" , input => $"{(double)input} mm"},
-		};
+			{ "AddkHz", input => $"{((Convert.ToDouble((UInt32)input))/1000).ToString()} kHz"},
+            { "Addkbps", input => $"{(((UInt32)input)/1000).ToString()} kbps"},
+        };
 	}
 }
