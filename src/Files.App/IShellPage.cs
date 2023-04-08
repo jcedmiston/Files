@@ -7,7 +7,7 @@ using System.ComponentModel;
 
 namespace Files.App
 {
-	public interface IShellPage : ITabItemContent, IMultiPaneInfo, IDisposable
+	public interface IShellPage : ITabItemContent, IMultiPaneInfo, IDisposable, INotifyPropertyChanged
 	{
 		ItemViewModel FilesystemViewModel { get; }
 
@@ -26,6 +26,10 @@ namespace Files.App
 		bool CanNavigateForward { get; }
 
 		void Refresh_Click();
+
+		void Back_Click();
+
+		void Forward_Click();
 
 		void Up_Click();
 
@@ -49,6 +53,11 @@ namespace Files.App
 
 		void RemoveLastPageFromBackStack();
 
+		/// <summary>
+		/// Replaces any outdated entries with those of the correct page type
+		/// </summary>
+		void ResetNavigationStackLayoutMode();
+
 		void SubmitSearch(string query, bool searchUnindexedItems);
 
 		/// <summary>
@@ -60,8 +69,12 @@ namespace Files.App
 	public interface IPaneHolder : IDisposable, INotifyPropertyChanged
 	{
 		public IShellPage ActivePane { get; set; }
-		public IShellPage ActivePaneOrColumn { get; } // if column view, returns the last column shell page, otherwise returns the active pane normally
+
+		// If column view, returns the last column shell page, otherwise returns the active pane normally
+		public IShellPage ActivePaneOrColumn { get; }
+
 		public IFilesystemHelpers FilesystemHelpers { get; }
+
 		public TabItemArguments TabItemArguments { get; set; }
 
 		public void OpenPathInNewPane(string path);
@@ -69,15 +82,18 @@ namespace Files.App
 		public void CloseActivePane();
 
 		public bool IsLeftPaneActive { get; }
+
 		public bool IsRightPaneActive { get; }
 
-		public bool IsMultiPaneActive { get; } // Another pane is shown
-		public bool IsMultiPaneEnabled { get; } // Multi pane is enabled
+		// Another pane is shown
+		public bool IsMultiPaneActive { get; }
+
+		// Multi pane is enabled
+		public bool IsMultiPaneEnabled { get; }
 	}
 
 	public interface IMultiPaneInfo
 	{
-		public bool IsPageMainPane { get; } // The instance is the left (or only) pane
 		public IPaneHolder PaneHolder { get; }
 	}
 }

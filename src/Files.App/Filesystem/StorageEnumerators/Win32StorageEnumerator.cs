@@ -3,11 +3,10 @@ using Files.App.Extensions;
 using Files.App.Filesystem.StorageItems;
 using Files.App.Helpers;
 using Files.App.Helpers.FileListCache;
-using Files.App.Shell;
 using Files.Backend.Extensions;
+using Files.Backend.Helpers;
 using Files.Backend.Services.Settings;
 using Files.Backend.Services.SizeProvider;
-using Files.Shared;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
@@ -15,7 +14,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
-using Vanara.Windows.Shell;
 using Windows.Storage;
 using static Files.Backend.Helpers.NativeFindStorageItemHelper;
 using FileAttributes = System.IO.FileAttributes;
@@ -141,7 +139,7 @@ namespace Files.App.Filesystem.StorageEnumerators
 
 		public static ListedItem GetAlternateStream((string Name, long Size) ads, ListedItem main)
 		{
-			string itemType = "ItemTypeFile".GetLocalizedResource();
+			string itemType = "File".GetLocalizedResource();
 			string itemFileExtension = null;
 			if (ads.Name.Contains('.'))
 			{
@@ -255,7 +253,7 @@ namespace Files.App.Filesystem.StorageEnumerators
 
 			long itemSizeBytes = findData.GetSize();
 			var itemSize = itemSizeBytes.ToSizeString();
-			string itemType = "ItemTypeFile".GetLocalizedResource();
+			string itemType = "File".GetLocalizedResource();
 			string itemFileExtension = null;
 
 			if (findData.cFileName.Contains('.'))
@@ -275,7 +273,7 @@ namespace Files.App.Filesystem.StorageEnumerators
 			bool isHidden = ((FileAttributes)findData.dwFileAttributes & FileAttributes.Hidden) == FileAttributes.Hidden;
 			double opacity = isHidden ? Constants.UI.DimItemOpacity : 1;
 
-			// https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/c8e77b37-3909-4fe6-a4ea-2b9d423b1ee4
+			// https://learn.microsoft.com/openspecs/windows_protocols/ms-fscc/c8e77b37-3909-4fe6-a4ea-2b9d423b1ee4
 			bool isReparsePoint = ((FileAttributes)findData.dwFileAttributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint;
 			bool isSymlink = isReparsePoint && findData.dwReserved0 == NativeFileOperationsHelper.IO_REPARSE_TAG_SYMLINK;
 
@@ -295,7 +293,7 @@ namespace Files.App.Filesystem.StorageEnumerators
 					ItemDateModifiedReal = itemModifiedDate,
 					ItemDateAccessedReal = itemLastAccessDate,
 					ItemDateCreatedReal = itemCreatedDate,
-					ItemType = "ShortcutFileType".GetLocalizedResource(),
+					ItemType = "Shortcut".GetLocalizedResource(),
 					ItemPath = itemPath,
 					FileSize = itemSize,
 					FileSizeBytes = itemSizeBytes,
@@ -303,10 +301,10 @@ namespace Files.App.Filesystem.StorageEnumerators
 					IsSymLink = true
 				};
 			}
-			else if (findData.cFileName.EndsWith(".lnk", StringComparison.Ordinal) || findData.cFileName.EndsWith(".url", StringComparison.Ordinal))
+			else if (FileExtensionHelpers.IsShortcutOrUrlFile(findData.cFileName))
 			{
-				var isUrl = findData.cFileName.EndsWith(".url", StringComparison.OrdinalIgnoreCase);
-				var shInfo = await ParseLinkAsync(itemPath);
+				var isUrl = FileExtensionHelpers.IsWebLinkFile(findData.cFileName);
+				var shInfo = await FileOperationsHelpers.ParseLinkAsync(itemPath);
 				if (shInfo is null)
 				{
 					return null;
@@ -324,7 +322,7 @@ namespace Files.App.Filesystem.StorageEnumerators
 					ItemDateModifiedReal = itemModifiedDate,
 					ItemDateAccessedReal = itemLastAccessDate,
 					ItemDateCreatedReal = itemCreatedDate,
-					ItemType = isUrl ? "ShortcutWebLinkFileType".GetLocalizedResource() : "ShortcutFileType".GetLocalizedResource(),
+					ItemType = isUrl ? "ShortcutWebLinkFileType".GetLocalizedResource() : "Shortcut".GetLocalizedResource(),
 					ItemPath = itemPath,
 					FileSize = itemSize,
 					FileSizeBytes = itemSizeBytes,
@@ -387,38 +385,6 @@ namespace Files.App.Filesystem.StorageEnumerators
 				}
 			}
 			return null;
-		}
-
-		private async static Task<ShellLinkItem> ParseLinkAsync(string linkPath)
-		{
-			try
-			{
-				if (linkPath.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
-				{
-					using var link = new ShellLink(linkPath, LinkResolution.NoUIWithMsgPump, default, TimeSpan.FromMilliseconds(100));
-					return ShellFolderExtensions.GetShellLinkItem(link);
-				}
-				else if (linkPath.EndsWith(".url", StringComparison.OrdinalIgnoreCase))
-				{
-					var linkUrl = await Win32API.StartSTATask(() =>
-					{
-						var ipf = new Url.IUniformResourceLocator();
-						(ipf as System.Runtime.InteropServices.ComTypes.IPersistFile).Load(linkPath, 0);
-						ipf.GetUrl(out var retVal);
-						return retVal;
-					});
-					return new ShellLinkItem() { TargetPath = linkUrl };
-				}
-				else
-				{
-					throw new Exception();
-				}
-			}
-			catch (Exception)
-			{
-				// TODO: Log this properly
-				return await Task.FromResult<ShellLinkItem>(null);
-			}
 		}
 	}
 }

@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.DependencyInjection;
 using Files.App.DataModels.NavigationControlItems;
 using Files.Backend.Services.Settings;
-using Files.Shared;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -12,7 +12,7 @@ namespace Files.App.Filesystem
 {
 	public class FileTagsManager
 	{
-		private readonly ILogger logger = Ioc.Default.GetService<ILogger>();
+		private readonly ILogger logger = Ioc.Default.GetRequiredService<ILogger<App>>();
 		private readonly IFileTagsSettingsService fileTagsSettingsService = Ioc.Default.GetService<IFileTagsSettingsService>();
 
 		public EventHandler<NotifyCollectionChangedEventArgs> DataChanged;
@@ -29,6 +29,20 @@ namespace Files.App.Filesystem
 			}
 		}
 
+		public FileTagsManager()
+		{
+			fileTagsSettingsService.OnTagsUpdated += TagsUpdated;
+		}
+
+		private async void TagsUpdated(object? _, EventArgs e)
+		{
+			lock (fileTags)
+				fileTags.Clear();
+			DataChanged?.Invoke(SectionType.FileTag, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+
+			await UpdateFileTagsAsync();
+		}
+
 		public Task UpdateFileTagsAsync()
 		{
 			try
@@ -37,15 +51,15 @@ namespace Files.App.Filesystem
 				{
 					var tagItem = new FileTagItem
 					{
-						Text = tag.TagName,
-						Path = $"tag:{tag.TagName}",
+						Text = tag.Name,
+						Path = $"tag:{tag.Name}",
 						FileTag = tag,
 						MenuOptions = new ContextMenuOptions { IsLocationItem = true },
 					};
 
 					lock (fileTags)
 					{
-						if (fileTags.Any(x => x.Path == $"tag:{tag.TagName}"))
+						if (fileTags.Any(x => x.Path == $"tag:{tag.Name}"))
 						{
 							continue;
 						}
@@ -56,7 +70,7 @@ namespace Files.App.Filesystem
 			}
 			catch (Exception ex)
 			{
-				logger.Warn(ex, "Error loading tags section.");
+				logger.LogWarning(ex, "Error loading tags section.");
 			}
 
 			return Task.CompletedTask;

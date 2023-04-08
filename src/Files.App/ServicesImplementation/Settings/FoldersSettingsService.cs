@@ -14,9 +14,9 @@ namespace Files.App.ServicesImplementation.Settings
 			RegisterSettingsContext(settingsSharingContext);
 		}
 
-		public bool EnableOverridingFolderPreferences
+		public bool SyncFolderPreferencesAcrossDirectories
 		{
-			get => Get(true);
+			get => Get(false);
 			set => Set(value);
 		}
 
@@ -82,6 +82,36 @@ namespace Files.App.ServicesImplementation.Settings
 			}
 		}
 
+		public double DateDeletedColumnWidth
+		{
+			get => Get(200d);
+			set
+			{
+				if (ShowDateDeletedColumn)
+					Set(value);
+			}
+		}
+
+		public double OriginalPathColumnWidth
+		{
+			get => Get(200d);
+			set
+			{
+				if (ShowOriginalPathColumn)
+					Set(value);
+			}
+		}
+
+		public double SyncStatusColumnWidth
+		{
+			get => Get(50d);
+			set
+			{
+				if (ShowSyncStatusColumn)
+					Set(value);
+			}
+		}
+
 		public bool ShowDateColumn
 		{
 			get => Get(true);
@@ -107,6 +137,24 @@ namespace Files.App.ServicesImplementation.Settings
 		}
 
 		public bool ShowFileTagColumn
+		{
+			get => Get(true);
+			set => Set(value);
+		}
+
+		public bool ShowDateDeletedColumn
+		{
+			get => Get(true);
+			set => Set(value);
+		}
+
+		public bool ShowOriginalPathColumn
+		{
+			get => Get(true);
+			set => Set(value);
+		}
+
+		public bool ShowSyncStatusColumn
 		{
 			get => Get(true);
 			set => Set(value);
@@ -159,11 +207,78 @@ namespace Files.App.ServicesImplementation.Settings
 			get => Get(false);
 			set => Set(value);
 		}
+
+		public SortOption DefaultSortOption
+		{
+			get => (SortOption)Get((long)SortOption.Name);
+			set => Set((long)value);
+		}
+
+		public GroupOption DefaultGroupOption
+		{
+			get => (GroupOption)Get((long)GroupOption.None);
+			set => Set((long)value);
+		}
+
+		public SortDirection DefaultDirectorySortDirection
+		{
+			get => (SortDirection)Get((long)SortDirection.Ascending);
+			set => Set((long)value);
+		}
+
+		public SortDirection DefaultDirectoryGroupDirection
+		{
+			get => (SortDirection)Get((long)SortDirection.Ascending);
+			set => Set((long)value);
+		}
+
+		public bool DefaultSortDirectoriesAlongsideFiles
+		{
+			get => Get(false);
+			set => Set(value);
+		}
+
+		public bool ShowFileExtensions
+		{
+			get => Get(true);
+			set => Set(value);
+		}
+
+		public bool ShowThumbnails
+		{
+			get => Get(true);
+			set => Set(value);
+		}
+
+		public DeleteConfirmationPolicies DeleteConfirmationPolicy
+		{
+			get => (DeleteConfirmationPolicies)Get((long)DeleteConfirmationPolicies.Always);
+			set => Set((long)value);
+		}
+
+		public bool SelectFilesOnHover
+		{
+			get => Get(false);
+			set => Set(value);
+		}
+
+		public bool DoubleClickToGoUp
+		{
+			get => Get(true);
+			set => Set(value);
+		}
+
+		public bool ShowFileExtensionWarning
+		{
+			get => Get(true);
+			set => Set(value);
+		}
+
 		protected override void RaiseOnSettingChangedEvent(object sender, SettingChangedEventArgs e)
 		{
 			switch (e.SettingName)
 			{
-				case nameof(EnableOverridingFolderPreferences):
+				case nameof(SyncFolderPreferencesAcrossDirectories):
 				case nameof(DefaultLayoutMode):
 				case nameof(TagColumnWidth):
 				case nameof(NameColumnWidth):
@@ -184,6 +299,12 @@ namespace Files.App.ServicesImplementation.Settings
 				case nameof(ColumnLayoutOpenFoldersWithOneClick):
 				case nameof(OpenFoldersInNewTab):
 				case nameof(CalculateFolderSizes):
+				case nameof(ShowFileExtensions):
+				case nameof(ShowThumbnails):
+				case nameof(DeleteConfirmationPolicy):
+				case nameof(SelectFilesOnHover):
+				case nameof(DoubleClickToGoUp):
+				case nameof(ShowFileExtensionWarning):
 					Analytics.TrackEvent($"Set {e.SettingName} to {e.NewValue}");
 					break;
 			}

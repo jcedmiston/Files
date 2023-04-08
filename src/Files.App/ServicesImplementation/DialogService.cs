@@ -5,10 +5,12 @@ using Files.Backend.ViewModels.Dialogs;
 using Files.Backend.ViewModels.Dialogs.AddItemDialog;
 using Files.Backend.ViewModels.Dialogs.FileSystemDialog;
 using Files.Shared.Enums;
+using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Windows.Foundation.Metadata;
 
@@ -28,7 +30,9 @@ namespace Files.App.ServicesImplementation
 				{ typeof(ElevateConfirmDialogViewModel), () => new ElevateConfirmDialog() },
 				{ typeof(FileSystemDialogViewModel), () => new FilesystemOperationDialog() },
 				{ typeof(DecompressArchiveDialogViewModel), () => new DecompressArchiveDialog() },
-				{ typeof(SettingsDialogViewModel), () => new SettingsDialog() }
+				{ typeof(SettingsDialogViewModel), () => new SettingsDialog() },
+				{ typeof(CreateShortcutDialogViewModel), () => new CreateShortcutDialog() },
+				{ typeof(ReorderSidebarItemsDialogViewModel), () => new ReorderSidebarItemsDialog() }
 			};
 		}
 
@@ -61,7 +65,9 @@ namespace Files.App.ServicesImplementation
 			}
 			catch (Exception ex)
 			{
-				_ = ex;
+				App.Logger.LogWarning(ex, "Failed to show dialog");
+
+				Debugger.Break();
 			}
 
 			return Task.FromResult(DialogResult.None);

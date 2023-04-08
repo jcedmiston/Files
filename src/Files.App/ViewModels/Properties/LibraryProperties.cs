@@ -4,6 +4,7 @@ using Files.App.Filesystem;
 using Files.App.Filesystem.StorageItems;
 using Files.App.Helpers;
 using Files.Shared.Services.DateTimeFormatter;
+using Microsoft.Extensions.Logging;
 using Microsoft.UI.Dispatching;
 using System;
 using System.Collections.Generic;
@@ -91,7 +92,7 @@ namespace Files.App.ViewModels.Properties
 				}
 				catch (Exception ex)
 				{
-					App.Logger.Warn(ex, ex.Message);
+					App.Logger.LogWarning(ex, ex.Message);
 				}
 			}
 
@@ -124,7 +125,7 @@ namespace Files.App.ViewModels.Properties
 			}
 			catch (Exception ex)
 			{
-				App.Logger.Warn(ex, ex.Message);
+				App.Logger.LogWarning(ex, ex.Message);
 			}
 
 			ViewModel.ItemSizeProgressVisibility = false;
@@ -145,6 +146,7 @@ namespace Files.App.ViewModels.Properties
 					{
 						NativeFileOperationsHelper.UnsetFileAttribute(Library.ItemPath, System.IO.FileAttributes.ReadOnly);
 					}
+
 					break;
 
 				case "IsHidden":
@@ -156,6 +158,7 @@ namespace Files.App.ViewModels.Properties
 					{
 						NativeFileOperationsHelper.UnsetFileAttribute(Library.ItemPath, System.IO.FileAttributes.Hidden);
 					}
+
 					break;
 			}
 		}

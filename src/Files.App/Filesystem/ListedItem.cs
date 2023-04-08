@@ -5,6 +5,7 @@ using Files.App.Filesystem.Cloud;
 using Files.App.Filesystem.StorageItems;
 using Files.App.Helpers;
 using Files.App.ViewModels.Properties;
+using Files.Backend.Helpers;
 using Files.Backend.Services.Settings;
 using Files.Backend.ViewModels.FileTags;
 using Files.Shared.Extensions;
@@ -15,7 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.Storage;
@@ -28,9 +29,9 @@ namespace Files.App.Filesystem
 	{
 		protected static IUserSettingsService UserSettingsService { get; } = Ioc.Default.GetRequiredService<IUserSettingsService>();
 
-		protected static IFileTagsSettingsService FileTagsSettingsService { get; } = Ioc.Default.GetRequiredService<IFileTagsSettingsService>();
+		protected static readonly IFileTagsSettingsService fileTagsSettingsService = Ioc.Default.GetRequiredService<IFileTagsSettingsService>();
 
-		protected static IDateTimeFormatter DateTimeFormatter { get; } = Ioc.Default.GetRequiredService<IDateTimeFormatter>();
+		protected static readonly IDateTimeFormatter dateTimeFormatter = Ioc.Default.GetRequiredService<IDateTimeFormatter>();
 
 		public bool IsHiddenItem { get; set; } = false;
 
@@ -47,12 +48,16 @@ namespace Files.App.Filesystem
 		{
 			get
 			{
-				return $"{"ToolTipDescriptionName".GetLocalizedResource()} {Name}{Environment.NewLine}" +
-					$"{"ToolTipDescriptionType".GetLocalizedResource()} {itemType}{Environment.NewLine}" +
-					$"{"ToolTipDescriptionDate".GetLocalizedResource()} {ItemDateModified}" +
-					(SyncStatusUI.LoadSyncStatus 
-						? $"{Environment.NewLine}{"syncStatusColumn/Header".GetLocalizedResource()}: {syncStatusUI.SyncStatusString}" 
-						: string.Empty);
+				var tooltipBuilder = new StringBuilder();
+				tooltipBuilder.AppendLine($"{"ToolTipDescriptionName".GetLocalizedResource()} {Name}");
+				tooltipBuilder.AppendLine($"{"ToolTipDescriptionType".GetLocalizedResource()} {itemType}");
+				tooltipBuilder.Append($"{"ToolTipDescriptionDate".GetLocalizedResource()} {ItemDateModified}");
+				if(!string.IsNullOrWhiteSpace(FileSize))
+					tooltipBuilder.Append($"{Environment.NewLine}{"SizeLabel".GetLocalizedResource()} {FileSize}");
+				if(SyncStatusUI.LoadSyncStatus)
+					tooltipBuilder.Append($"{Environment.NewLine}{"syncStatusColumn/Header".GetLocalizedResource()}: {syncStatusUI.SyncStatusString}");
+
+				return tooltipBuilder.ToString();
 			}
 		}
 
@@ -125,19 +130,18 @@ namespace Files.App.Filesystem
 			{
 				if (SetProperty(ref fileTags, value))
 				{
-					using (var dbInstance = FileTagsHelper.GetDbInstance())
-					{
-						dbInstance.SetTags(ItemPath, FileFRN, value);
-					}
+					var dbInstance = FileTagsHelper.GetDbInstance();
+					dbInstance.SetTags(ItemPath, FileFRN, value);
+					HasTags = !FileTags.IsEmpty();
 					FileTagsHelper.WriteFileTag(ItemPath, value);
 					OnPropertyChanged(nameof(FileTagsUI));
 				}
 			}
 		}
 
-		public IList<FileTagViewModel> FileTagsUI
+		public IList<TagViewModel> FileTagsUI
 		{
-			get => FileTagsSettingsService.GetTagsByIds(FileTags);
+			get => fileTagsSettingsService.GetTagsByIds(FileTags);
 		}
 
 		private Uri customIconSource;
@@ -152,6 +156,13 @@ namespace Files.App.Filesystem
 		{
 			get => opacity;
 			set => SetProperty(ref opacity, value);
+		}
+
+		private bool hasTags;
+		public bool HasTags
+		{
+			get => hasTags;
+			set => SetProperty(ref hasTags, value);
 		}
 
 		private CloudDriveSyncStatusUI syncStatusUI = new();
@@ -272,7 +283,7 @@ namespace Files.App.Filesystem
 				if (PrimaryItemAttribute == StorageItemTypes.File)
 				{
 					var nameWithoutExtension = Path.GetFileNameWithoutExtension(itemNameRaw);
-					if (!string.IsNullOrEmpty(nameWithoutExtension) && !UserSettingsService.PreferencesSettingsService.ShowFileExtensions)
+					if (!string.IsNullOrEmpty(nameWithoutExtension) && !UserSettingsService.FoldersSettingsService.ShowFileExtensions)
 					{
 						return nameWithoutExtension;
 					}
@@ -323,7 +334,7 @@ namespace Files.App.Filesystem
 			get => itemDateModifiedReal;
 			set
 			{
-				ItemDateModified = DateTimeFormatter.ToShortLabel(value);
+				ItemDateModified = dateTimeFormatter.ToShortLabel(value);
 				itemDateModifiedReal = value;
 				OnPropertyChanged(nameof(ItemDateModified));
 			}
@@ -335,7 +346,7 @@ namespace Files.App.Filesystem
 			get => itemDateCreatedReal;
 			set
 			{
-				ItemDateCreated = DateTimeFormatter.ToShortLabel(value);
+				ItemDateCreated = dateTimeFormatter.ToShortLabel(value);
 				itemDateCreatedReal = value;
 				OnPropertyChanged(nameof(ItemDateCreated));
 			}
@@ -347,7 +358,7 @@ namespace Files.App.Filesystem
 			get => itemDateAccessedReal;
 			set
 			{
-				ItemDateAccessed = DateTimeFormatter.ToShortLabel(value);
+				ItemDateAccessed = dateTimeFormatter.ToShortLabel(value);
 				itemDateAccessedReal = value;
 				OnPropertyChanged(nameof(ItemDateAccessed));
 			}
@@ -389,7 +400,7 @@ namespace Files.App.Filesystem
 			}
 			else if (IsLibrary)
 			{
-				suffix = "LibraryItemAutomation".GetLocalizedResource();
+				suffix = "Library".GetLocalizedResource();
 			}
 			else
 			{
@@ -407,8 +418,9 @@ namespace Files.App.Filesystem
 		public bool IsFtpItem => this is FtpItem;
 		public bool IsArchive => this is ZipItem;
 		public bool IsAlternateStream => this is AlternateStreamItem;
-		public virtual bool IsExecutable => new[] { ".exe", ".bat", ".cmd" }.Contains(Path.GetExtension(ItemPath), StringComparer.OrdinalIgnoreCase);
-		public bool IsPinned => App.SidebarPinnedController.Model.FavoriteItems.Contains(itemPath);
+		public virtual bool IsExecutable => FileExtensionHelpers.IsExecutableFile(ItemPath);
+		public bool IsPinned => App.QuickAccessManager.Model.FavoriteItems.Contains(itemPath);
+		public bool IsDriveRoot => ItemPath == PathNormalization.GetPathRoot(ItemPath);
 
 		private BaseStorageFile itemFile;
 		public BaseStorageFile ItemFile
@@ -452,7 +464,7 @@ namespace Files.App.Filesystem
 			get => itemDateDeletedReal;
 			set
 			{
-				ItemDateDeleted = DateTimeFormatter.ToShortLabel(value);
+				ItemDateDeleted = dateTimeFormatter.ToShortLabel(value);
 				itemDateDeletedReal = value;
 			}
 		}
@@ -481,7 +493,7 @@ namespace Files.App.Filesystem
 			PrimaryItemAttribute = isFile ? StorageItemTypes.File : StorageItemTypes.Folder;
 			ItemPropertiesInitialized = false;
 
-			var itemType = isFile ? "ItemTypeFile".GetLocalizedResource() : "Folder".GetLocalizedResource();
+			var itemType = isFile ? "File".GetLocalizedResource() : "Folder".GetLocalizedResource();
 			if (isFile && Name.Contains('.', StringComparison.Ordinal))
 			{
 				itemType = FileExtension.Trim('.') + " " + itemType;
@@ -491,7 +503,7 @@ namespace Files.App.Filesystem
 			FileSizeBytes = item.Size;
 			ContainsFilesOrFolders = !isFile;
 			FileImage = null;
-			FileSize = FileSizeBytes.ToSizeString();
+			FileSize = isFile ? FileSizeBytes.ToSizeString() : null;
 			Opacity = 1;
 			IsHiddenItem = false;
 		}
@@ -517,7 +529,7 @@ namespace Files.App.Filesystem
 		// For shortcut elements (.lnk and .url)
 		public string TargetPath { get; set; }
 
-		public override string Name 
+		public override string Name
 			=> IsSymLink ? base.Name : Path.GetFileNameWithoutExtension(ItemNameRaw); // Always hide extension for shortcuts
 
 		public string Arguments { get; set; }
@@ -525,7 +537,7 @@ namespace Files.App.Filesystem
 		public bool RunAsAdmin { get; set; }
 		public bool IsUrl { get; set; }
 		public bool IsSymLink { get; set; }
-		public override bool IsExecutable => string.Equals(Path.GetExtension(TargetPath), ".exe", StringComparison.OrdinalIgnoreCase);
+		public override bool IsExecutable => FileExtensionHelpers.IsExecutableFile(TargetPath, true);
 	}
 
 	public class ZipItem : ListedItem
@@ -539,7 +551,7 @@ namespace Files.App.Filesystem
 			get
 			{
 				var nameWithoutExtension = Path.GetFileNameWithoutExtension(ItemNameRaw);
-				if (!string.IsNullOrEmpty(nameWithoutExtension) && !UserSettingsService.PreferencesSettingsService.ShowFileExtensions)
+				if (!string.IsNullOrEmpty(nameWithoutExtension) && !UserSettingsService.FoldersSettingsService.ShowFileExtensions)
 				{
 					return nameWithoutExtension;
 				}
@@ -559,7 +571,7 @@ namespace Files.App.Filesystem
 			ItemPath = library.Path;
 			ItemNameRaw = library.Text;
 			PrimaryItemAttribute = StorageItemTypes.Folder;
-			ItemType = "ItemTypeLibrary".GetLocalizedResource();
+			ItemType = "Library".GetLocalizedResource();
 			LoadCustomIcon = true;
 			CustomIcon = library.Icon;
 			//CustomIconSource = library.IconSource;
@@ -590,7 +602,7 @@ namespace Files.App.Filesystem
 			{
 				var nameWithoutExtension = Path.GetFileNameWithoutExtension(ItemNameRaw);
 				var mainStreamNameWithoutExtension = Path.GetFileNameWithoutExtension(MainStreamName);
-				if (!UserSettingsService.PreferencesSettingsService.ShowFileExtensions)
+				if (!UserSettingsService.FoldersSettingsService.ShowFileExtensions)
 				{
 					return $"{(string.IsNullOrEmpty(mainStreamNameWithoutExtension) ? MainStreamName : mainStreamNameWithoutExtension)}:{(string.IsNullOrEmpty(nameWithoutExtension) ? ItemNameRaw : nameWithoutExtension)}";
 				}

@@ -18,12 +18,12 @@ namespace Files.App.Helpers
 			return option switch
 			{
 				GroupOption.Name => x => new string(x.Name.Take(1).ToArray()).ToUpperInvariant(),
-				GroupOption.Size => x => x.PrimaryItemAttribute != StorageItemTypes.Folder ? GetGroupSizeKey(x.FileSizeBytes) : x.FileSizeDisplay,
+				GroupOption.Size => x => x.PrimaryItemAttribute != StorageItemTypes.Folder || x.IsArchive ? GetGroupSizeKey(x.FileSizeBytes) : x.FileSizeDisplay,
 				GroupOption.DateCreated => x => dateTimeFormatter.ToTimeSpanLabel(x.ItemDateCreatedReal).Text,
 				GroupOption.DateModified => x => dateTimeFormatter.ToTimeSpanLabel(x.ItemDateModifiedReal).Text,
 				GroupOption.FileType => x => x.PrimaryItemAttribute == StorageItemTypes.Folder && !x.IsShortcut ? x.ItemType : x.FileExtension?.ToLowerInvariant() ?? " ",
 				GroupOption.SyncStatus => x => x.SyncStatusString,
-				GroupOption.FileTag => x => x.FileTags?.FirstOrDefault(),
+				GroupOption.FileTag => x => x.FileTags?.FirstOrDefault() ?? "Untagged",
 				GroupOption.OriginalFolder => x => (x as RecycleBinItem)?.ItemOriginalFolder,
 				GroupOption.DateDeleted => x => dateTimeFormatter.ToTimeSpanLabel((x as RecycleBinItem)?.ItemDateDeletedReal ?? DateTimeOffset.Now).Text,
 				GroupOption.FolderPath => x => PathNormalization.GetParentDir(x.ItemPath.TrimPath()),
@@ -60,7 +60,7 @@ namespace Files.App.Helpers
 				GroupOption.Size => (x =>
 				{
 					var first = x.First();
-					if (first.PrimaryItemAttribute != StorageItemTypes.Folder)
+					if (first.PrimaryItemAttribute != StorageItemTypes.Folder || first.IsArchive)
 					{
 						var vals = GetGroupSizeInfo(first.FileSizeBytes);
 						//x.Model.Text = vals.text;
@@ -94,9 +94,9 @@ namespace Files.App.Helpers
 
 				GroupOption.FileTag => (x =>
 				{
-					ListedItem first = x.First();
+					ListedItem first = x.FirstOrDefault();
 					x.Model.ShowCountTextBelow = true;
-					x.Model.Text = first.FileTagsUI?.FirstOrDefault()?.TagName ?? "None".GetLocalizedResource();
+					x.Model.Text = first.FileTagsUI?.FirstOrDefault()?.Name ?? "Untagged".GetLocalizedResource();
 					//x.Model.Icon = first.FileTagsUI?.FirstOrDefault()?.Color;
 				}, null),
 
@@ -140,12 +140,12 @@ namespace Files.App.Helpers
 				if (size > sizeGp.size)
 				{
 					var rangeStr = i > 0 ? $"{sizeGp.sizeText} - {sizeGroups[i - 1].sizeText}" : $"{sizeGp.sizeText} +";
-					return (sizeGp.size.ToString(), sizeGp.text, rangeStr, i + 1); //i +1 is so that other groups always show below "unspecified"
+					return (sizeGp.size.ToString(), sizeGp.text, rangeStr, sizeGroups.Length - i);
 				}
 				lastSizeStr = sizeGp.sizeText;
 			}
 
-			return ("0", "ItemSizeText_Tiny".GetLocalizedResource(), $"{"0 B".ConvertSizeAbbreviation()} - {lastSizeStr}", sizeGroups.Length + 1);
+			return ("0", "ItemSizeText_Tiny".GetLocalizedResource(), $"{"0 B".ConvertSizeAbbreviation()} - {lastSizeStr}", 0);
 		}
 
 		public static string GetGroupSizeKey(long size)

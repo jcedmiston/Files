@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
+using Vanara.PInvoke;
 
 namespace Files.App.Helpers
 {
@@ -455,6 +456,21 @@ namespace Files.App.Helpers
 				{
 					return (ulong)fileStruct.FileId;
 				}
+			}
+			return null;
+		}
+
+		public static ulong? GetFileFRN(string filePath)
+		{
+			using var handle = OpenFileForRead(filePath);
+			if (!handle.IsInvalid)
+			{
+				try
+				{
+					var fileID = Kernel32.GetFileInformationByHandleEx<Kernel32.FILE_ID_INFO>(handle, Kernel32.FILE_INFO_BY_HANDLE_CLASS.FileIdInfo);
+					return BitConverter.ToUInt64(fileID.FileId.Identifier, 0);
+				}
+				catch { }
 			}
 			return null;
 		}

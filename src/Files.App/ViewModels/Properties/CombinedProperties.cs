@@ -2,6 +2,7 @@ using Files.App.Extensions;
 using Files.App.Filesystem;
 using Files.App.Filesystem.StorageItems;
 using Files.App.Helpers;
+using Microsoft.Extensions.Logging;
 using Microsoft.UI.Dispatching;
 using System;
 using System.Collections.Generic;
@@ -21,8 +22,12 @@ namespace Files.App.ViewModels.Properties
     {
         public List<ListedItem> List { get; }
 
-        public CombinedProperties(SelectedItemsPropertiesViewModel viewModel, CancellationTokenSource tokenSource,
-            DispatcherQueue coreDispatcher, List<ListedItem> listedItems, IShellPage instance)
+		public CombinedProperties(
+			SelectedItemsPropertiesViewModel viewModel,
+			CancellationTokenSource tokenSource,
+			DispatcherQueue coreDispatcher,
+			List<ListedItem> listedItems,
+			IShellPage instance)
         {
             ViewModel = viewModel;
             TokenSource = tokenSource;
@@ -35,9 +40,10 @@ namespace Files.App.ViewModels.Properties
 
         public override void GetBaseProperties()
         {
-            if (List != null)
+			if (List is not null)
             {
                 ViewModel.LoadCombinedItemsGlyph = true;
+
                 if (List.All(x => x.ItemType.Equals(List.First().ItemType)))
                 {
                     ViewModel.ItemType = string.Format("PropertiesDriveItemTypesEquals".GetLocalizedResource(), List.First().ItemType);
@@ -46,8 +52,10 @@ namespace Files.App.ViewModels.Properties
                 {
                     ViewModel.ItemType = "PropertiesDriveItemTypeDifferent".GetLocalizedResource();
                 }
+
                 var itemsPath = List.Select(Item => (Item as RecycleBinItem)?.ItemOriginalFolder ??
                     (Path.IsPathRooted(Item.ItemPath) ? Path.GetDirectoryName(Item.ItemPath) : Item.ItemPath));
+                    
                 if (itemsPath.Distinct().Count() == 1)
                 {
                     ViewModel.ItemPath = string.Format("PropertiesCombinedItemPath".GetLocalizedResource(), itemsPath.First());
@@ -89,7 +97,7 @@ namespace Files.App.ViewModels.Properties
                     }
                     catch (Exception ex)
                     {
-                        App.Logger.Warn(ex, ex.Message);
+                        App.Logger.LogWarning(ex, ex.Message);
                     }
                 }
             }

@@ -8,31 +8,31 @@ parameters:
   - name: releaseBranch
     displayName: Release Branch
     type: string
-    default: 'preview'
+    default: 'stable'
     values:
-    - 'preview'
     - 'stable'
+    - 'preview'
   - name: packageIdentityName
     displayName: Package Identity Name
     type: string
-    default: 'FilesPreview'
+    default: 'Files'
     values:
-    - 'FilesPreview'
     - 'Files'
+    - 'FilesPreview'
   - name: packageDisplayName
     displayName: Package Display Name
     type: string
-    default: 'Files (Preview)'
+    default: 'Files'
     values:
-    - 'Files (Preview)'
     - 'Files'
+    - 'Files - Preview'
   - name: iconVariant
     displayName: Icon Variant
     type: string
-    default: 'Preview'
+    default: 'Release'
     values:
-    - 'Preview'
     - 'Release'
+    - 'Preview'
 
 variables:
 - group: BuildPipelineVariables
@@ -63,7 +63,7 @@ jobs:
         $xmlDoc.Package.Applications.Application.VisualElements.DisplayName="${{parameters.packageDisplayName}}"
         $xmlDoc.Save('$(Build.SourcesDirectory)\src\Files.App (Package)\Package.appxmanifest')
       failOnStderr: true
-
+      
  # This replaces references to the dev icon with the specified icon variant 
   - task: PowerShell@2
     displayName: 'Use Correct Logo'
@@ -89,19 +89,16 @@ jobs:
       TargetFolder: '$(Build.SourcesDirectory)\src\Files.App\Resources'
       overWrite: true
 
-  - task: DownloadSecureFile@1
-    name: appCenterDevKey
-    displayName: 'Download AppCenter Dev Key'
+# Injects the AppCenter token to the project
+  - task: PowerShell@2
+    displayName: 'Inject AppCenter token'
     inputs:
-      secureFile: 'AppCenterKey.txt'
-
-# Adds the AppCenter token to the project
-  - task: CopyFiles@2
-    inputs:
-      SourceFolder: '$(Agent.TempDirectory)'
-      Contents: '$(appCenterDevKey.secureFilePath)'
-      TargetFolder: '$(Build.SourcesDirectory)\src\Files.App\Resources'
-      overWrite: true
+      targetType: 'inline'
+      script: |
+        gci $(Build.SourcesDirectory)\src -Include *.cs -recurse | ForEach -Process {
+        (Get-Content $_ -Raw | ForEach -Process {$_ -replace "appcenter.secret", "$(appcenter.secret)"}) | Set-Content $_ -NoNewline
+        }
+      failOnStderr: true
 
   - task: UseDotNet@2
     inputs:
@@ -189,7 +186,7 @@ jobs:
       targetType: 'inline'
       script: |
         gci $(Build.SourcesDirectory)\src -Include *.csproj, *.appxmanifest, *.wapproj -recurse | ForEach -Process {
-        (Get-Content $_ -Raw | ForEach -Process {$_ -replace "Assets\\AppTiles\\Dev", "Assets\AppTiles\${{parameters.iconVariant}}"}) | Set-Content $_ -NoNewline
+        (Get-Content $_ -Raw | ForEach -Process {$_ -replace "Assets\\AppTiles\\Dev", "Assets\AppTiles\Release"}) | Set-Content $_ -NoNewline
         }
       failOnStderr: true
 
@@ -207,19 +204,16 @@ jobs:
       TargetFolder: '$(Build.SourcesDirectory)\src\Files.App\Resources'
       overWrite: true
 
-# Adds the AppCenter token to the project
-  - task: DownloadSecureFile@1
-    name: appCenterDevKey
-    displayName: 'Download AppCenter Dev Key'
+# Injects the AppCenter token to the project
+  - task: PowerShell@2
+    displayName: 'Inject AppCenter token'
     inputs:
-      secureFile: 'AppCenterKey.txt'
-
-  - task: CopyFiles@2
-    inputs:
-      SourceFolder: '$(Agent.TempDirectory)'
-      Contents: '$(appCenterDevKey.secureFilePath)'
-      TargetFolder: '$(Build.SourcesDirectory)\src\Files.App\Resources'
-      overWrite: true
+      targetType: 'inline'
+      script: |
+        gci $(Build.SourcesDirectory)\src -Include *.cs -recurse | ForEach -Process {
+        (Get-Content $_ -Raw | ForEach -Process {$_ -replace "appcenter.secret", "$(appcenter.secret)"}) | Set-Content $_ -NoNewline
+        }
+      failOnStderr: true
 
   - task: UseDotNet@2
     inputs:

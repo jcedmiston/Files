@@ -5,12 +5,10 @@ namespace Files.App.ViewModels
 {
 	public class CurrentInstanceViewModel : ObservableObject
 	{
-		/*
-		 * TODO:
-		 * In the future, we should consolidate these public variables into
-		 * a single enum property providing simplified customization of the
-		 * values being manipulated inside the setter blocks.
-		 */
+		 // TODO:
+		 //  In the future, we should consolidate these public variables into
+		 //  a single enum property providing simplified customization of the
+		 //  values being manipulated inside the setter blocks
 
 		public FolderSettingsViewModel FolderSettings { get; }
 
@@ -25,7 +23,6 @@ namespace Files.App.ViewModels
 		}
 
 		private bool isPageTypeSearchResults = false;
-
 		public bool IsPageTypeSearchResults
 		{
 			get => isPageTypeSearchResults;
@@ -34,16 +31,13 @@ namespace Files.App.ViewModels
 				SetProperty(ref isPageTypeSearchResults, value);
 				OnPropertyChanged(nameof(IsCreateButtonEnabledInPage));
 				OnPropertyChanged(nameof(CanCreateFileInPage));
-				OnPropertyChanged(nameof(CanPasteInPage));
 				OnPropertyChanged(nameof(CanCopyPathInPage));
 				OnPropertyChanged(nameof(ShowSearchUnindexedItemsMessage));
-				OnPropertyChanged(nameof(CanShareInPage));
 				OnPropertyChanged(nameof(CanTagFilesInPage));
 			}
 		}
 
 		private string currentSearchQuery;
-
 		public string CurrentSearchQuery
 		{
 			get => currentSearchQuery;
@@ -51,7 +45,6 @@ namespace Files.App.ViewModels
 		}
 
 		private bool searchedUnindexedItems;
-
 		public bool SearchedUnindexedItems
 		{
 			get => searchedUnindexedItems;
@@ -70,7 +63,6 @@ namespace Files.App.ViewModels
 		}
 
 		private bool isPageTypeNotHome = false;
-
 		public bool IsPageTypeNotHome
 		{
 			get => isPageTypeNotHome;
@@ -79,16 +71,13 @@ namespace Files.App.ViewModels
 				SetProperty(ref isPageTypeNotHome, value);
 				OnPropertyChanged(nameof(IsCreateButtonEnabledInPage));
 				OnPropertyChanged(nameof(CanCreateFileInPage));
-				OnPropertyChanged(nameof(CanPasteInPage));
 				OnPropertyChanged(nameof(CanCopyPathInPage));
 				OnPropertyChanged(nameof(ShowSearchUnindexedItemsMessage));
-				OnPropertyChanged(nameof(CanShareInPage));
 				OnPropertyChanged(nameof(CanTagFilesInPage));
 			}
 		}
 
 		private bool isPageTypeMtpDevice = false;
-
 		public bool IsPageTypeMtpDevice
 		{
 			get => isPageTypeMtpDevice;
@@ -97,16 +86,13 @@ namespace Files.App.ViewModels
 				SetProperty(ref isPageTypeMtpDevice, value);
 				OnPropertyChanged(nameof(IsCreateButtonEnabledInPage));
 				OnPropertyChanged(nameof(CanCreateFileInPage));
-				OnPropertyChanged(nameof(CanPasteInPage));
 				OnPropertyChanged(nameof(CanCopyPathInPage));
 				OnPropertyChanged(nameof(ShowSearchUnindexedItemsMessage));
-				OnPropertyChanged(nameof(CanShareInPage));
 				OnPropertyChanged(nameof(CanTagFilesInPage));
 			}
 		}
 
 		private bool isPageTypeRecycleBin = false;
-
 		public bool IsPageTypeRecycleBin
 		{
 			get => isPageTypeRecycleBin;
@@ -115,16 +101,13 @@ namespace Files.App.ViewModels
 				SetProperty(ref isPageTypeRecycleBin, value);
 				OnPropertyChanged(nameof(IsCreateButtonEnabledInPage));
 				OnPropertyChanged(nameof(CanCreateFileInPage));
-				OnPropertyChanged(nameof(CanPasteInPage));
 				OnPropertyChanged(nameof(CanCopyPathInPage));
 				OnPropertyChanged(nameof(ShowSearchUnindexedItemsMessage));
-				OnPropertyChanged(nameof(CanShareInPage));
 				OnPropertyChanged(nameof(CanTagFilesInPage));
 			}
 		}
 
 		private bool isPageTypeFtp = false;
-
 		public bool IsPageTypeFtp
 		{
 			get => isPageTypeFtp;
@@ -133,16 +116,13 @@ namespace Files.App.ViewModels
 				SetProperty(ref isPageTypeFtp, value);
 				OnPropertyChanged(nameof(IsCreateButtonEnabledInPage));
 				OnPropertyChanged(nameof(CanCreateFileInPage));
-				OnPropertyChanged(nameof(CanPasteInPage));
 				OnPropertyChanged(nameof(CanCopyPathInPage));
 				OnPropertyChanged(nameof(ShowSearchUnindexedItemsMessage));
-				OnPropertyChanged(nameof(CanShareInPage));
 				OnPropertyChanged(nameof(CanTagFilesInPage));
 			}
 		}
 
 		private bool isPageTypeCloudDrive = false;
-
 		public bool IsPageTypeCloudDrive
 		{
 			get => isPageTypeCloudDrive;
@@ -151,16 +131,13 @@ namespace Files.App.ViewModels
 				SetProperty(ref isPageTypeCloudDrive, value);
 				OnPropertyChanged(nameof(IsCreateButtonEnabledInPage));
 				OnPropertyChanged(nameof(CanCreateFileInPage));
-				OnPropertyChanged(nameof(CanPasteInPage));
 				OnPropertyChanged(nameof(CanCopyPathInPage));
 				OnPropertyChanged(nameof(ShowSearchUnindexedItemsMessage));
-				OnPropertyChanged(nameof(CanShareInPage));
 				OnPropertyChanged(nameof(CanTagFilesInPage));
 			}
 		}
 
 		private bool isPageTypeZipFolder = false;
-
 		public bool IsPageTypeZipFolder
 		{
 			get => isPageTypeZipFolder;
@@ -169,16 +146,13 @@ namespace Files.App.ViewModels
 				SetProperty(ref isPageTypeZipFolder, value);
 				OnPropertyChanged(nameof(IsCreateButtonEnabledInPage));
 				OnPropertyChanged(nameof(CanCreateFileInPage));
-				OnPropertyChanged(nameof(CanPasteInPage));
 				OnPropertyChanged(nameof(CanCopyPathInPage));
 				OnPropertyChanged(nameof(ShowSearchUnindexedItemsMessage));
-				OnPropertyChanged(nameof(CanShareInPage));
 				OnPropertyChanged(nameof(CanTagFilesInPage));
 			}
 		}
 
 		private bool isPageTypeLibrary = false;
-
 		public bool IsPageTypeLibrary
 		{
 			get => isPageTypeLibrary;
@@ -187,10 +161,8 @@ namespace Files.App.ViewModels
 				SetProperty(ref isPageTypeLibrary, value);
 				OnPropertyChanged(nameof(IsCreateButtonEnabledInPage));
 				OnPropertyChanged(nameof(CanCreateFileInPage));
-				OnPropertyChanged(nameof(CanPasteInPage));
 				OnPropertyChanged(nameof(CanCopyPathInPage));
 				OnPropertyChanged(nameof(ShowSearchUnindexedItemsMessage));
-				OnPropertyChanged(nameof(CanShareInPage));
 				OnPropertyChanged(nameof(CanTagFilesInPage));
 			}
 		}
@@ -208,16 +180,6 @@ namespace Files.App.ViewModels
 		public bool CanCreateFileInPage
 		{
 			get => !isPageTypeMtpDevice && !isPageTypeRecycleBin && isPageTypeNotHome && !isPageTypeSearchResults && !isPageTypeFtp && !isPageTypeZipFolder;
-		}
-
-		public bool CanPasteInPage
-		{
-			get => !isPageTypeRecycleBin && isPageTypeNotHome && !isPageTypeSearchResults;
-		}
-
-		public bool CanShareInPage
-		{
-			get => !isPageTypeRecycleBin && isPageTypeNotHome && !isPageTypeFtp && !isPageTypeZipFolder;
 		}
 
 		public bool CanTagFilesInPage
